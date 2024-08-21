@@ -1,0 +1,9 @@
+[package]
+name = "launcher"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core_lib = {path = "../core_lib"}
+
+tokio = { version = "1.39.3", features = ["full"] }

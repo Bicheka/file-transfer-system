@@ -1,8 +1,9 @@
-[package]
-name = "fts"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tokio = {version = "1.39.3", features = ["full"]}
-num_cpus = "1.13"
+[workspace]
+members = [
+    "server",
+    "client",
+    "launcher", 
+    "core_lib", 
+    "bridge_net",
+]
+resolver = "2"
