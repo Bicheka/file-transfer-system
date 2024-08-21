@@ -2,5 +2,7 @@
 members = [
     "server",
     "client",
-    "launcher"
+    "launcher", 
+    "core_lib", 
+    "bridge_net",
 ]

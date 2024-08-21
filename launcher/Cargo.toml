@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-server = { path = "../server" }
-client = { path = "../client" }
+core_lib = {path = "../core_lib"}
+
+tokio = { version = "1.39.3", features = ["full"] }
