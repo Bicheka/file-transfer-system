@@ -1,11 +1,5 @@
 use std::io;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
-
-#[cfg(test)]
-pub mod tests{
-
-}
-
 pub async fn api() -> io::Result<()>{
     println!("Starting server");
 
@@ -24,17 +18,14 @@ pub async fn api() -> io::Result<()>{
                 eprintln!("Error handling connection: {:?}", e);
             }
         });
-        println!("123");
     }
 }
 
 async fn handle_connection(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = [0; 1024];
-
     loop {
         // Read data from the socket
         let bytes_read = socket.read(&mut buffer).await?;
-
         if bytes_read == 0 {
             // Connection was closed
             break;
