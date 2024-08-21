@@ -7,3 +7,25 @@ The goal for this project is to allow anyone to be able to send any file/s of la
     Server is going to be like the Client that connects to an API reciever
     if the reciever acepts the request then the client can send the file/s
 </p>
+
+## Project structure
+#### Workspace
+```
+./ bridge_net------- // combines functionality for server and client into one app
+./ client----------- // is going to create the binary app for a client only
+./ server----------- // in charge of crating a server app only
+./ launcher--------- // allows users to launche server and client apps as 2 separate apps and manage them
+./ core_lib--------- // where most of the code for the rest of the crates live the heart of the project
+    | server.rs ------ // module with all the code for server binary
+    | client.rs ------ // module with all the code for client binary
+```
+## testing
+test all
+```
+cargo test
+```
+
+To run a test that is inside a feature
+```
+cargo test -p package-name --feature feature-name module-name::tests::test-function-name
+```

@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 tokio = {version = "1.39.3", features = ["full"]}
-core_lib = { path = "../core_lib"}
+core_lib = { path = "../core_lib", features = ["server"]}

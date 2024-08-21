@@ -5,4 +5,3 @@ edition = "2021"
 
 [dependencies]
 tokio = {version = "1.39.3", features = ["full"]}
-server = { path = "../server" }

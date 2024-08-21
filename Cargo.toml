@@ -6,3 +6,4 @@ members = [
     "core_lib", 
     "bridge_net",
 ]
+resolver = "2"

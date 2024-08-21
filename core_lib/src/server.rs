@@ -1,6 +1,11 @@
 use std::io;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
 
+#[cfg(test)]
+pub mod tests{
+
+}
+
 pub async fn api() -> io::Result<()>{
     println!("Starting server");
 
@@ -52,3 +57,4 @@ async fn handle_request(request: String) -> String {
     // Example: Simple echo server, responds with the same data received
     format!("Echo: {}", request)
 }
+
