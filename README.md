@@ -9,7 +9,7 @@ The goal for this project is to allow anyone to be able to send any file/s of la
 </p>
 
 ## Project structure
-#### Workspace
+## Workspace
 ```
 ./ bridge_net------- // combines functionality for server and client into one app
 ./ client----------- // is going to create the binary app for a client only
