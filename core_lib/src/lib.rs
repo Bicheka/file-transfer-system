@@ -1,13 +1,12 @@
+use serde::{Deserialize, Serialize};
+
 #[cfg(feature = "server")]
 pub mod server;
 
-pub enum RequestMethod {
-    POST,
-    GET
-}
+pub mod client;
 
-pub struct Request{
-    pub method: RequestMethod,
-    pub path: Option<String> 
+#[derive(Serialize, Deserialize)]
+pub enum Request {
+    List, // list of file names/paths
+    Get(String), // get("filename/path")
 }
-
