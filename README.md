@@ -1,4 +1,4 @@
-# File transport system (FTS)
+# File transfer system (FTS)
 The goal for this project is to allow anyone to be able to send any file/s of large size directly to any other device securely and blazingly fast.
 
 ![alt text](fts.png)
@@ -7,9 +7,10 @@ The goal for this project is to allow anyone to be able to send any file/s of la
     Server is going to be like the Client that connects to an API reciever
     if the reciever acepts the request then the client can send the file/s
 </p>
-
-## Project structure
 ** This project is in a stage where it is still defining its structure so it might be subject of major changes**
+
+## Project architecture(
+
 ### Workspace
 ```
 ./ bridge_net------- // combines functionality for server and client into one app
