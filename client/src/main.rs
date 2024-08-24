@@ -1,7 +1,7 @@
 use std::error::Error;
 use tokio::{io::AsyncReadExt, net::TcpStream}; 
 use core_lib::{Request, client::send_request};
-
+use std::io;
 // starts client
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn Error>>{
@@ -22,5 +22,12 @@ pub async fn main() -> Result<(), Box<dyn Error>>{
 
     let response  = stream.read(&mut buffer).await.unwrap();
     println!("{}",String::from_utf8_lossy(&buffer[..response]).trim().to_string());
+
+
+    // Wait for user input before closing
+    println!("Press Enter to exit...");
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
     Ok(())
 }
