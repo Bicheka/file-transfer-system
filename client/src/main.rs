@@ -7,24 +7,20 @@ use core_lib::{Request, client::send_request};
 pub async fn main() -> Result<(), Box<dyn Error>>{
     let addr = "127.0.0.1:8080";
     let mut stream = TcpStream::connect(addr).await?;
-
+    let mut buffer: [u8; 1024] = [0; 1024];
     let request = Request::List;
+    println!("Sending List request");
     send_request(&mut stream, &request).await?;
+
+    let response  = stream.read(&mut buffer).await.unwrap();
+    println!("{}",String::from_utf8_lossy(&buffer[..response]).trim().to_string());
 
     // Send Get request
     let request = Request::Get("elden ring".to_owned());
     println!("Sending get request");
     send_request(&mut stream, &request).await?;
 
-    let mut buffer = [0; 1024];
-    loop{
-        let bytes_read = stream.read(&mut buffer).await?;
-        if bytes_read == 0 {
-            println!("Connection closed by client");
-            break;
-        }
-        println!("{}",String::from_utf8_lossy(&buffer[..bytes_read]));
-    }
-
+    let response  = stream.read(&mut buffer).await.unwrap();
+    println!("{}",String::from_utf8_lossy(&buffer[..response]).trim().to_string());
     Ok(())
 }
