@@ -4,6 +4,6 @@ members = [
     "client",
     "launcher", 
     "core_lib", 
-    "bridge_net",
+    "unified",
 ]
 resolver = "2"

@@ -7,9 +7,11 @@ The goal for this project is to allow anyone to be able to send any file/s of la
     Server is going to be like the Client that connects to an API reciever
     if the reciever acepts the request then the client can send the file/s
 </p>
+** This project is in a stage where it is still defining its structure so it might be subject of major changes**
 
-## Project structure
-## Workspace
+## Project architecture(
+
+### Workspace
 ```
 ./ bridge_net------- // combines functionality for server and client into one app
 ./ client----------- // is going to create the binary app for a client only
@@ -19,7 +21,7 @@ The goal for this project is to allow anyone to be able to send any file/s of la
     | server.rs ------ // module with all the code for server binary
     | client.rs ------ // module with all the code for client binary
 ```
-## testing
+### Testing
 test all
 ```
 cargo test
