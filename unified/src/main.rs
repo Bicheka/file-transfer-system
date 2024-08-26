@@ -1,11 +1,27 @@
-use std::net:: SocketAddrV4;
+use std::net::SocketAddrV4;
 use core::net::IpAddr;
-use core_lib::{p2p::upnp, server::api};
+use core_lib::{p2p::upnp, graceful_shutdown::exit, server::api};
 use local_ip_address::local_ip;
 
-#[tokio::main]
-async fn main() {
+use tokio::{runtime::Builder, task};
+fn main(){
+    let rt = Builder::new_multi_thread()
+        .worker_threads(4)
+        .enable_all()
+        .build()
+        .unwrap();
 
+    rt.block_on(async {
+        let program = task::spawn(program());
+        let shutdown = task::spawn(exit(on_exit));
+        tokio::select! {
+            _ = program => {},
+            _ = shutdown => {}
+        }
+    });
+}
+
+async fn program(){
     upnp().await;
     let addr = get_local_ip_as_string().unwrap();
     let port = "8080";
@@ -13,13 +29,11 @@ async fn main() {
 }
 
 async fn upnp(){
-    let gateway = upnp::discover_gateway().unwrap();
     let ip = local_ip().unwrap();
-    println!("{}", gateway.get_external_ip().unwrap());
     match ip {
         IpAddr::V4(ipv4) => {
             let socket = SocketAddrV4::new(ipv4, 8080);
-            upnp::add_port_mapping(gateway, socket);
+            upnp::add_port_mapping(socket);
         },
         IpAddr::V6(_) => {
             println!("ipv6 not supported")
@@ -33,4 +47,10 @@ fn get_local_ip_as_string() -> Result<String, String> {
         Err(e) => Err(format!("Failed to get local IP address: {}", e)),
     }
 }
-    
+
+async fn on_exit(){
+    println!("Performing cleanup operations...");
+    // Simulate cleanup delay
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    println!("Shutdown complete.");
+}
