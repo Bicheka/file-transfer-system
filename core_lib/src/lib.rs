@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub mod server;
 
 pub mod client;
+pub mod p2p;
 
 #[derive(Serialize, Deserialize)]
 pub enum Request {
