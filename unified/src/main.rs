@@ -1,6 +1,6 @@
 use std::net::SocketAddrV4;
 use core::net::IpAddr;
-use core_lib::{p2p::upnp, graceful_shutdown::exit, server::api};
+use core_lib::{graceful_shutdown::exit, p2p::upnp, server::api};
 use local_ip_address::local_ip;
 
 use tokio::{runtime::Builder, task};
@@ -50,7 +50,6 @@ fn get_local_ip_as_string() -> Result<String, String> {
 
 async fn on_exit(){
     println!("Performing cleanup operations...");
-    // Simulate cleanup delay
-    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    upnp::remove_port_mapping().await;
     println!("Shutdown complete.");
 }

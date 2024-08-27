@@ -34,7 +34,7 @@ pub mod upnp{
         
     }
 
-    pub fn remove_port_mapping() {
+    pub async fn remove_port_mapping() {
         match discover_gateway() {
             Ok(gateway) => {
                 match gateway.remove_port(PortMappingProtocol::TCP, 8080) {
