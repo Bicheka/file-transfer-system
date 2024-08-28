@@ -1,8 +1,5 @@
-use std::net::SocketAddrV4;
-use core::net::IpAddr;
-use crate::{graceful_shutdown::exit, p2p::upnp, server::api};
+use crate::{p2p::upnp, server::api};
 use local_ip_address::local_ip;
-
 
 pub async fn start_server(){
     upnp::upnp().await;
