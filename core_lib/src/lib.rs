@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "server")]
 pub mod server;
-
+pub mod unified;
 pub mod client;
 pub mod p2p;
 
@@ -14,14 +14,11 @@ pub enum Request {
 
 pub mod graceful_shutdown {
     use tokio::signal::windows;
-    use std::future::Future;
+
+    use crate::p2p::upnp;
 
     // The `on_exit` function is now a closure or function that returns a Future
-    pub async fn exit<F, Fut>(on_exit: F) -> Result<(), std::io::Error>
-    where
-        F: FnOnce() -> Fut + Send + 'static,
-        Fut: Future<Output = ()> + Send + 'static,
-    {
+    pub async fn exit() -> Result<(), std::io::Error>{
         // Windows exit signals
         let mut ctrl_c = windows::ctrl_c()?;
         let mut ctrl_break = windows::ctrl_break()?;
@@ -56,5 +53,11 @@ pub mod graceful_shutdown {
         shutdown_handle.await?;
 
         Ok(())
+    }
+
+    async fn on_exit(){
+        println!("Performing cleanup operations...");
+        upnp::remove_port_mapping().await;
+        println!("Shutdown complete.");
     }
 }
