@@ -9,11 +9,11 @@ The goal for this project is to allow anyone to be able to send any file/s of la
 </p>
 ** This project is in a stage where it is still defining its structure so it might be subject of major changes**
 
-## Project architecture(
+## Project architecture
 
 ### Workspace
 ```
-./ bridge_net------- // combines functionality for server and client into one app
+./ fts-unified------ // combines functionality for server and client into one app
 ./ client----------- // is going to create the binary app for a client only
 ./ server----------- // in charge of crating a server app only
 ./ launcher--------- // allows users to launche server and client apps as 2 separate apps and manage them

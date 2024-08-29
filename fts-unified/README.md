@@ -1,14 +1,14 @@
 # comands
 
-install npm dependencies
+### install npm dependencies:
 ```
 npm i
 ```
-start in dev mode
+### start in dev mode:
 ```
 npm run tauri dev
 ```
-build executable
+### build executable:
 ```
 npm run tauri build
 ```
