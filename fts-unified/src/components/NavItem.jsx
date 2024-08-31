@@ -7,7 +7,7 @@ function NavItem({ path, item }){
     const handleClick = () => {
         navigate(path)
     }
-    return (<div className="nav-item" onClick={handleClick}>
+    return (<div className="nav-item shadow-lg" onClick={handleClick}>
         {item}
     </div>
     );

@@ -7,11 +7,13 @@ The goal for this project is to allow anyone to be able to send any file/s of la
     Server is going to be like the Client that connects to an API reciever
     if the reciever acepts the request then the client can send the file/s
 </p>
-** This project is in a stage where it is still defining its structure so it might be subject of major changes**
+This project is in a stage where it is still defining its structure so it might be subject of major changes
+
+If you want to use the desktop app you can cd into fts-unified and then follow the README instructions to run in it in dev mode or to compile the executable
 
 ## Project architecture
 
-### Workspace
+This project repository is basically a cargo workspace with multiples crates
 ```
 ./ fts-unified------ // combines functionality for server and client into one app
 ./ client----------- // is going to create the binary app for a client only
