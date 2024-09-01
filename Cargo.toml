@@ -2,7 +2,6 @@
 members = [
     "server",
     "client",
-    "launcher", 
     "core_lib", 
     "unified",
     "fts-unified/src-tauri"
