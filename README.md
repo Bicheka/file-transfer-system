@@ -19,6 +19,7 @@ This project repository is basically a cargo workspace with multiples crates
 ./ client----------- // is going to create the binary app for a client only
 ./ server----------- // in charge of crating a server app only
 ./ core_lib--------- // where most of the code for the rest of the crates live the heart of the project
+./ p2p-------------- // contains logic for peer to peer comunication like nat traversal
     | server.rs ------ // module with all the code for server binary
     | client.rs ------ // module with all the code for client binary
 ```

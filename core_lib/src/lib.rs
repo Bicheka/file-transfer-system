@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "server")]
+// #[cfg(feature = "server")]
 pub mod server;
 pub mod unified;
 pub mod client;
