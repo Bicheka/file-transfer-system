@@ -16,9 +16,9 @@
       "icons/icon.ico"
     ]
   },
-  "productName": "fts-unified",
+  "productName": "fileflow",
   "version": "0.1.0",
-  "identifier": "com.fts-unified.app",
+  "identifier": "com.fileflow.app",
   "plugins": {},
   "app": {
     "security": {
@@ -26,7 +26,7 @@
     },
     "windows": [
       {
-        "title": "fts-unified",
+        "title": "fileflow",
         "width": 800,
         "height": 600
       }
