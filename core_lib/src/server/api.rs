@@ -2,6 +2,8 @@ use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
 use std::io;
 use bincode;
 use crate::Request;
+
+/// Starts server by listening for incomming connections
 pub async fn run(addr: &str) -> io::Result<()>{
     // listen for client connection
     let listener = TcpListener::bind(addr).await?;
@@ -21,7 +23,7 @@ pub async fn run(addr: &str) -> io::Result<()>{
     }
 }
 
-// handles connections and reads the data transmited through the socket
+/// handles connections and reads the data transmited through the socket
 async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = [0; 1024];
     loop {
@@ -51,7 +53,7 @@ async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-// handle the request depeding on what the request is asking for
+/// handle the request depeding on what the request is asking for
 async fn match_request(request: &Request) -> String {
     match request {
         Request::List => {
