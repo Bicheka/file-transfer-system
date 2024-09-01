@@ -16,6 +16,15 @@
     hover:bg-[#EB3678] hover:cursor-pointer hover:text-slate-200 
     active:bg-[#4F1787]
     rounded-3xl hover:rounded-xl
-    transition-border-radius duration-300 ease-linear
+    transition-border-radius duration-300 ease-linear;
+  }
+}
+@layer components {
+  .nav-tooltip {
+    @apply absolute w-auto p-2 m-2 min-w-max bottom-14 sm:left-14 sm:bottom-auto
+    rounded-md shadow-lg
+    text-white bg-gray-900
+    text-xs font-bold
+    transition-all duration-100 scale-0 origin-bottom sm:origin-left;
   }
 }
