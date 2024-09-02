@@ -16,10 +16,15 @@ If you want to build the app you can cd into /fileflow and then follow the READM
 This project repository is basically a cargo workspace with multiples crates
 ```
 ./ fileflow------ // combines functionality for server and client into one app using tauri which allows it to build for all mobiles and desktop
-./ core_lib--------- // where most of the code for the rest of the crates live the heart of the project
-----/
-----/
-----/
+./ fts--------- // core library, where most of the code for the lives
+    |-server
+        |-api
+        |-admin
+    |-client
+    |-p2p
+    |-network
+    |-file_transfer
+    |-graceful_shutdown
 ```
 ### Testing
 test all
