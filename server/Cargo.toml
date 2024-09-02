@@ -1,8 +1,0 @@
-[package]
-name = "server"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tokio = {version = "1.39.3", features = ["full"]}
-core_lib = { path = "../core_lib", features = ["server"]}

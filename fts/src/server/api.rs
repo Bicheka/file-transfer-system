@@ -1,10 +1,10 @@
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
 use std::io;
 use bincode;
-use crate::Request;
+use crate::network::Request;
 
 /// Starts server by listening for incomming connections
-pub async fn run(addr: &str) -> io::Result<()>{
+pub async fn run_api(addr: &str) -> io::Result<()>{
     // listen for client connection
     let listener = TcpListener::bind(addr).await?;
     println!("Server running on {}",addr);
@@ -24,7 +24,7 @@ pub async fn run(addr: &str) -> io::Result<()>{
 }
 
 /// handles connections and reads the data transmited through the socket
-async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = [0; 1024];
     loop {
         // Read data from the socket

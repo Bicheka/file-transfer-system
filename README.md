@@ -9,19 +9,22 @@ The goal for this project is to allow anyone to be able to send any file/s of la
 </p>
 This project is in a stage where it is still defining its structure so it might be subject of major changes
 
-If you want to use the desktop app you can cd into fts-unified and then follow the README instructions to run in it in dev mode or to compile the executable
+If you want to build the app you can cd into /fileflow and then follow the README instructions to run in it in dev mode or to compile the executable
 
 ## Project architecture
 
 This project repository is basically a cargo workspace with multiples crates
 ```
-./ fts-unified------ // combines functionality for server and client into one app
-./ client----------- // is going to create the binary app for a client only
-./ server----------- // in charge of crating a server app only
-./ core_lib--------- // where most of the code for the rest of the crates live the heart of the project
-./ p2p-------------- // contains logic for peer to peer comunication like nat traversal
-    | server.rs ------ // module with all the code for server binary
-    | client.rs ------ // module with all the code for client binary
+./ fileflow------ // combines functionality for server and client into one app using tauri which allows it to build for all mobiles and desktop
+./ fts--------- // core library, where most of the code for the lives
+    |-server
+        |-api
+        |-admin
+    |-client
+    |-p2p
+    |-network
+    |-file_transfer
+    |-graceful_shutdown
 ```
 ### Testing
 test all
