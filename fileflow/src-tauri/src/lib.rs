@@ -1,4 +1,6 @@
-use fts::unified;
+use fts::server;
+use fts::network;
+use fts::p2p::traverse_nat;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
 use tauri::async_runtime::block_on;
@@ -8,7 +10,7 @@ use tokio::task; // Use tokio for async tasks
 pub fn run() {
     tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![start_server])
-    .setup(|app| {
+    .setup(|_app| {
         block_on(start_client());
 
         Ok(())
@@ -20,10 +22,22 @@ pub fn run() {
 
 #[tauri::command]
 async fn start_server() {
-    task::spawn(unified::start_server());
+    task::spawn(async{
+        traverse_nat().await;
+        let ip = network::get_local_ip_as_string().unwrap();
+        let port = "8080";
+        let addr = format!("{ip}:{port}");
+        let mut server = server::Server::new(addr);
+        server.start_server().await.unwrap();
+    });
 }
-// TODO create functionality to stop server
 
+// #[tauri::command]
+// async fn stop_server(){
+//     println!("stoping server")
+// }
+
+// TODO create functionality to stop server
 async fn start_client(){
     println!("starting client")
 }

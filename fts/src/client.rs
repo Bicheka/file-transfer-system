@@ -1,8 +1,8 @@
-//! Contains the logic for the client, eg: sending requests, downloading files
+//! Contains the logic for the client, sending requests to a server
 
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 use bincode;
-use crate::Request;
+use crate::network::Request;
 
 /// sends a request serialized as bytes through the tcp stream
 pub async fn send_request(stream: &mut TcpStream, request: &Request) -> std::io::Result<()> {
