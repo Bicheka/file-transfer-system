@@ -23,7 +23,9 @@ pub fn run() {
 #[tauri::command]
 async fn start_server() {
     task::spawn(async{
+        //gets local ip address creates a new socket and adds a port mapping with it
         upnp().await.unwrap();
+        
         let ip = network::get_local_ip_as_string().unwrap();
         let port = "8080";
         let addr = format!("{ip}:{port}");
@@ -32,12 +34,13 @@ async fn start_server() {
     });
 }
 
+// TODO create functionality to stop server
 // #[tauri::command]
 // async fn stop_server(){
 //     println!("stoping server")
 // }
 
-// TODO create functionality to stop server
+
 async fn start_client(){
     println!("starting client")
 }

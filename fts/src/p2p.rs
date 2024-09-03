@@ -88,6 +88,4 @@ pub mod upnp{
 
 }
 
-pub mod stun {
-    
-}
+// TODO implement hole punching
