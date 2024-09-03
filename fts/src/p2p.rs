@@ -1,6 +1,4 @@
 //! Peer to peer connectivity logic including nat traversal
-
-use stun::stun;
 use upnp::upnp;
 pub async fn traverse_nat(){
     // Try UPnP
@@ -11,12 +9,18 @@ pub async fn traverse_nat(){
     println!("UPnP failed, falling back to STUN.");
 
     // Try STUN
-    match stun().await{
-        Ok(_) => return,
-        Err(e) => println!("Failed to establish stun connection: {}", e)
-    }
 
+}
 
+use reqwest::Error;
+/// Establishes a connection to a STUN server and returns the public IP address.
+pub async fn get_public_ip() -> Result<String, Error> {
+    // URL of the service that returns the public IP address
+    let url = "https://api.ipify.org";
+    let response = reqwest::get(url).await?;
+    // convert response to string
+    let ip = response.text().await?;
+    Ok(ip)
 }
 
 /// automates the process of allowing an application to operate through NAT
@@ -25,6 +29,7 @@ pub mod upnp{
     use core::net::SocketAddrV4;
     use core::net::IpAddr;
     use local_ip_address::local_ip;
+
 
     /// gets local ip address creates a new socket and adds a port mapping with it
     pub async fn upnp() -> Result<(), Box<dyn std::error::Error>>{
@@ -83,12 +88,6 @@ pub mod upnp{
 
 }
 
-
-pub mod stun{
-    pub async fn stun() -> Result<(), Box<dyn std::error::Error>>{
-        // logic needs to be added
-        println!("stun");
-        Ok(())
-    }
+pub mod stun {
+    
 }
-

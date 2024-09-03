@@ -1,6 +1,6 @@
 use fts::server;
 use fts::network;
-use fts::p2p::traverse_nat;
+use fts::p2p::upnp::upnp;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
 use tauri::async_runtime::block_on;
@@ -23,7 +23,7 @@ pub fn run() {
 #[tauri::command]
 async fn start_server() {
     task::spawn(async{
-        traverse_nat().await;
+        upnp().await.unwrap();
         let ip = network::get_local_ip_as_string().unwrap();
         let port = "8080";
         let addr = format!("{ip}:{port}");
