@@ -1,6 +1,4 @@
 //! Peer to peer connectivity logic including nat traversal
-
-use stun::stun;
 use upnp::upnp;
 pub async fn traverse_nat(){
     // Try UPnP
@@ -11,20 +9,15 @@ pub async fn traverse_nat(){
     println!("UPnP failed, falling back to STUN.");
 
     // Try STUN
-    match stun().await{
-        Ok(_) => return,
-        Err(e) => println!("Failed to establish stun connection: {}", e)
-    }
-
 
 }
-
 /// automates the process of allowing an application to operate through NAT
 pub mod upnp{
     use igd::{search_gateway, Error, Gateway, PortMappingProtocol};
     use core::net::SocketAddrV4;
     use core::net::IpAddr;
     use local_ip_address::local_ip;
+
 
     /// gets local ip address creates a new socket and adds a port mapping with it
     pub async fn upnp() -> Result<(), Box<dyn std::error::Error>>{
@@ -82,13 +75,3 @@ pub mod upnp{
     }
 
 }
-
-
-pub mod stun{
-    pub async fn stun() -> Result<(), Box<dyn std::error::Error>>{
-        // logic needs to be added
-        println!("stun");
-        Ok(())
-    }
-}
-
