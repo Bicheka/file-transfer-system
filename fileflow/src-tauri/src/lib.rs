@@ -25,11 +25,10 @@ async fn start_server() {
     task::spawn(async{
         //gets local ip address creates a new socket and adds a port mapping with it
         upnp().await.unwrap();
-        
-        let ip = network::get_local_ip_as_string().unwrap();
-        let port = "8080";
-        let addr = format!("{ip}:{port}");
-        let mut server = server::Server::new(addr);
+    
+        let ip = network::get_local_ip().unwrap();
+        let port: u16 = 8080;
+        let mut server = server::Server::new(ip, port);
         server.start_server().await.unwrap();
     });
 }

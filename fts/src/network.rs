@@ -1,5 +1,5 @@
 //! networking logic
-use std::error::Error;
+use std::{error::Error, net::IpAddr};
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
@@ -16,11 +16,8 @@ pub enum IpType{
 }
 
 /// gets local ip address as a string
-pub fn get_local_ip_as_string() -> Result<String, String> {
-    match local_ip() {
-        Ok(ip) => Ok(ip.to_string()),
-        Err(e) => Err(format!("Failed to get local IP address: {}", e)),
-    }
+pub fn get_local_ip() -> Result<IpAddr, Box<dyn Error>> {
+    return Ok(local_ip()?);
 }
 
 pub async fn get_public_ip(ip_type: IpType) -> Result<String, Box<dyn Error>> {

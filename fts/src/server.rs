@@ -1,6 +1,6 @@
 //! Contains logic for listening for incomming connections
 
-use std::io;
+use std::{io, net::IpAddr};
 
 /// Contains client request handling logic
 pub mod api;
@@ -10,18 +10,20 @@ pub mod admin;
 
 pub struct Server{
     pub is_server_running: bool,
-    pub addr: String
+    pub ip: IpAddr,
+    pub port: u16
 }
 
 impl Server{
-    pub fn new(addr: String) -> Self{
+    pub fn new(ip: IpAddr, port: u16) -> Self{
         Self {
             is_server_running: false,
-            addr
+            ip,
+            port,
         }
     }
     pub async fn start_server(&mut self) -> Result<(), io::Error>{
-        api::run_api(&self.addr).await?;
+        api::run_api(&self.ip, self.port).await?;
         self.is_server_running = true;
         Ok(())
     }
