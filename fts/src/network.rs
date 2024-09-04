@@ -24,7 +24,7 @@ pub fn get_local_ip_as_string() -> Result<String, String> {
     }
 }
 
-pub async fn get_ip(ip_type: IpType) -> Result<String, Box<dyn Error>> {
+pub async fn get_public_ip(ip_type: IpType) -> Result<String, Box<dyn Error>> {
     match ip_type{
         IpType::IPv4 => {
             let ip = reqwest::get("https://api.ipify.org").await?.text().await?;
