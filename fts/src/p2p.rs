@@ -11,18 +11,6 @@ pub async fn traverse_nat(){
     // Try STUN
 
 }
-
-use reqwest::Error;
-/// Establishes a connection to a STUN server and returns the public IP address.
-pub async fn get_public_ip() -> Result<String, Error> {
-    // URL of the service that returns the public IP address
-    let url = "https://api.ipify.org";
-    let response = reqwest::get(url).await?;
-    // convert response to string
-    let ip = response.text().await?;
-    Ok(ip)
-}
-
 /// automates the process of allowing an application to operate through NAT
 pub mod upnp{
     use igd::{search_gateway, Error, Gateway, PortMappingProtocol};
@@ -87,5 +75,3 @@ pub mod upnp{
     }
 
 }
-
-// TODO implement hole punching
