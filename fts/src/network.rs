@@ -1,9 +1,8 @@
 //! networking logic
-use std::{error::Error, net::{IpAddr, Ipv4Addr}};
+use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
-use serde_json::{json, Value};
 
 #[derive(Serialize, Deserialize)]
 pub enum Request {
