@@ -4,4 +4,5 @@ use fts::network::{get_public_ip, IpType};
 async fn test_get_ip(){
     println!("{:?}", get_public_ip(IpType::IPv6).await.unwrap());
     println!("{:?}", get_public_ip(IpType::IPv4).await.unwrap());
+    assert!(get_public_ip(IpType::IPv6).await.is_err());
 }
