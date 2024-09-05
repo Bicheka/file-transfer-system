@@ -10,6 +10,11 @@ pub enum Request {
     Get(String), // get("filename/path")
 }
 
+#[derive(Serialize, Deserialize)]
+pub enum Response {
+    Ok(String),
+    Err(String)
+}
 pub enum IpType{
     IPv4,
     IPv6
