@@ -1,19 +1,19 @@
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
-use std::io;
+use std::{io, net::{IpAddr, SocketAddr}};
 use bincode;
 use crate::network::Request;
 
 /// Starts server by listening for incomming connections
-pub async fn run_api(addr: &str) -> io::Result<()>{
+pub async fn run_api(ip: &IpAddr, port: u16) -> io::Result<()>{
     // listen for client connection
-    let listener = TcpListener::bind(addr).await?;
-    println!("Server running on {}",addr);
+    let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
+    println!("Server running on {}",ip);
 
     loop {
         // Accept incoming connections
         let (socket, addr) = listener.accept().await?;
         println!("New connection from: {}", addr);
-
+        
         // Handle the connection in a new task
         tokio::spawn(async move {
             if let Err(e) = handle_request(socket).await {
