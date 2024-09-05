@@ -1,6 +1,6 @@
 use std::{net::IpAddr, str::FromStr, time::Duration};
 
-use fts::{client, network::Request, server};
+use fts::{client, network::Request, network::Response, server};
 
 #[tokio::test]
 async fn test_client(){
@@ -12,6 +12,18 @@ async fn test_client(){
     client.set_timeout(Duration::from_secs(10));
     client.connect().await.unwrap();
     client.send_request(&Request::List).await.unwrap();
-    client.read_response().await.unwrap();
+
+    let response = client.read_response().await.unwrap();
+    match response {
+        Response::Ok(s) => println!("{s}"),
+        Response::Err(s) => eprintln!("{s}")
+    }
+    
+    client.send_request(&Request::Get("call of duty".to_owned())).await.unwrap();
+    let response = client.read_response().await.unwrap();
+    match response {
+        Response::Ok(s) => println!("{s}"),
+        Response::Err(s) => eprintln!("{s}")
+    }
     client.close().await.unwrap();
 }

@@ -1,7 +1,7 @@
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
 use std::{io, net::{IpAddr, SocketAddr}};
 use bincode;
-use crate::network::Request;
+use crate::network::{Request, Response};
 
 /// Starts server by listening for incomming connections
 pub async fn run_api(ip: &IpAddr, port: u16) -> io::Result<()>{
@@ -46,23 +46,27 @@ pub async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::er
         // Handle the request and generate a response
         let response = match_request(&request).await;
 
+        // serialize response
+        let response = bincode::serialize(&response)?;
+
         // Send the response back to the client
-        socket.write_all(response.as_bytes()).await?;
+        socket.write_all(&response).await?;
     }
 
     Ok(())
 }
 
 /// handle the request depeding on what the request is asking for
-async fn match_request(request: &Request) -> String {
+async fn match_request(request: &Request) -> Response {
     match request {
         Request::List => {
             println!("Handling List request");
-            "Available items: item1, item2, item3".to_owned()
+            Response::Ok("Available items: item1, item2, item3".to_owned())
         }
         Request::Get(path) => {
             println!("Handling Get request for: {}", path);
-            format!("Content of {}", path)
+            let response = format!("Content of {}", path);
+            Response::Ok(response)
         }
     }
 }
