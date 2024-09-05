@@ -1,5 +1,5 @@
 //! networking logic
-use std::{error::Error, net::IpAddr};
+use std::{error::Error, net::IpAddr, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
@@ -20,15 +20,15 @@ pub fn get_local_ip() -> Result<IpAddr, Box<dyn Error>> {
     return Ok(local_ip()?);
 }
 
-pub async fn get_public_ip(ip_type: IpType) -> Result<String, Box<dyn Error>> {
+pub async fn get_public_ip(ip_type: IpType) -> Result<IpAddr, Box<dyn Error>> {
     match ip_type{
         IpType::IPv4 => {
             let ip = reqwest::get("https://api.ipify.org").await?.text().await?;
-            return Ok(ip)
+            return Ok(IpAddr::from_str(&ip)?)
         },
         IpType::IPv6 => {
             let ip = reqwest::get("https://api64.ipify.org").await?.text().await?;
-            return Ok(ip)
+            return Ok(IpAddr::from_str(&ip)?)
         }
     };
 }

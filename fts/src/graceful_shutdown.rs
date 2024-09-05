@@ -42,6 +42,6 @@ pub async fn exit() -> Result<(), std::io::Error>{
 
 async fn on_exit(){
     println!("Performing cleanup operations...");
-    upnp::remove_port_mapping().await;
+    upnp::remove_port_mapping().await.unwrap();
     println!("Shutdown complete.");
 }

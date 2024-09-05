@@ -24,7 +24,7 @@ pub fn run() {
 async fn start_server() {
     task::spawn(async{
         //gets local ip address creates a new socket and adds a port mapping with it
-        upnp().await.unwrap();
+        upnp(8080).await.unwrap();
     
         let ip = network::get_local_ip().unwrap();
         let port: u16 = 8080;

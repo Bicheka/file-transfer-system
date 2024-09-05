@@ -13,7 +13,7 @@ pub async fn run_api(ip: &IpAddr, port: u16) -> io::Result<()>{
         // Accept incoming connections
         let (socket, addr) = listener.accept().await?;
         println!("New connection from: {}", addr);
-
+        
         // Handle the connection in a new task
         tokio::spawn(async move {
             if let Err(e) = handle_request(socket).await {
