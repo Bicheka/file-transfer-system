@@ -1,5 +1,7 @@
 //! Peer to peer connectivity logic including nat traversal
 use upnp::upnp;
+
+// TODO add other nat traversing methods
 pub async fn traverse_nat(){
     // Try UPnP
     match upnp(8080).await {
@@ -8,6 +10,7 @@ pub async fn traverse_nat(){
     }
 
 }
+
 /// automates the process of allowing an application to operate through NAT, maps local ip address to router gateway
 pub mod upnp{
     use igd::{search_gateway, Error, Gateway, PortMappingProtocol};
@@ -35,12 +38,12 @@ pub mod upnp{
         Ok(gateway)
     }
 
-    /// Add a port mapping for TCP on port 8080
+    /// Add a port mapping for TCP on specified port
     pub fn add_port_mapping(socket: SocketAddrV4) -> Result<Ipv4Addr, Box<dyn std::error::Error>>{
         let gateway = discover_gateway()?;
         gateway.add_port(
                 PortMappingProtocol::TCP,
-                8080,
+                socket.port(),
                 socket,
                 0,
                 "rust-upnp"
@@ -49,9 +52,9 @@ pub mod upnp{
         Ok(ip)
     }
     
-    pub async fn remove_port_mapping() -> Result<(), Box<dyn std::error::Error>> { 
+    pub async fn remove_port_mapping(port: u16) -> Result<(), Box<dyn std::error::Error>> { 
         let gateway = discover_gateway()?;
-        gateway.remove_port(PortMappingProtocol::TCP, 8080)?;
+        gateway.remove_port(PortMappingProtocol::TCP, port)?;
         Ok(())
     }
 
