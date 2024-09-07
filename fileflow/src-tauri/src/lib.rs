@@ -23,13 +23,19 @@ pub fn run() {
 #[tauri::command]
 async fn start_server() {
     task::spawn(async{
-        //gets local ip address creates a new socket and adds a port mapping with it
-        upnp(8080).await.unwrap();
-    
-        let ip = network::get_local_ip().unwrap();
         let port: u16 = 8080;
-        let mut server = server::Server::new(ip, port);
-        server.start_server().await.unwrap();
+        //gets local ip address creates a new socket and adds a port mapping with it
+        if let Ok(ip) = upnp(port).await{
+            println!("public ip: {}", ip);
+            let mut server = server::Server::new(network::get_local_ip().expect("failed to get local ip address"), port);
+            server.start_server().await.expect("failed to start server with upnp");
+        } else {
+            
+            println!("continuing using ipv6");
+            
+            let ip = network::get_public_ip(network::IpType::IPv6).await.expect("failed to start server with ipv6");
+            server::Server::new(ip, port);
+        }
     });
 }
 

@@ -1,6 +1,6 @@
 //! Contains logic for listening for incomming connections
 
-use std::{io, net::IpAddr};
+use std::net::IpAddr;
 
 /// Contains client request handling logic
 pub mod api;
@@ -22,7 +22,7 @@ impl Server{
             port,
         }
     }
-    pub async fn start_server(&mut self) -> Result<(), io::Error>{
+    pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>>{
         api::run_api(&self.ip, self.port).await?;
         self.is_server_running = true;
         Ok(())
