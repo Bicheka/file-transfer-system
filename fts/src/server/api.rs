@@ -1,30 +1,36 @@
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
-use std::{io, net::{IpAddr, SocketAddr}};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::oneshot};
+use std::net::{IpAddr, SocketAddr};
 use bincode;
 use crate::network::{Request, Response};
 
 /// Starts server by listening for incomming connections
-pub async fn run_api(ip: &IpAddr, port: u16) -> io::Result<()>{
-    // listen for client connection
-    let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
-    println!("Server running on {}",ip);
-
+pub async fn run_api(mut shutdown_rx: oneshot::Receiver<()>, ip: IpAddr, port: u16) {
+    let listener = TcpListener::bind(SocketAddr::new(ip, port)).await.unwrap();
     loop {
-        // Accept incoming connections
-        let (socket, addr) = listener.accept().await?;
-        println!("New connection from: {}", addr);
-        
-        // Handle the connection in a new task
-        tokio::spawn(async move {
-            if let Err(e) = handle_request(socket).await {
-                eprintln!("Error handling connection: {:?}", e);
+        tokio::select! {
+            // Wait for a new connection
+            Ok((socket, addr)) = listener.accept() => {
+                println!("New connection from: {}", addr);
+
+                // Handle the connection in a new task
+                tokio::spawn(async move {
+                    if let Err(e) = handle_request(socket).await {
+                        eprintln!("Error handling connection: {:?}", e);
+                    }
+                });
             }
-        });
+
+            // Await the shutdown signal
+            _ = &mut shutdown_rx => {
+                println!("Server shutting down.");
+                break;
+            }
+        }
     }
 }
 
 /// handles connections and reads the data transmited through the socket
-pub async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
+async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = [0; 1024];
     loop {
         // Read data from the socket
