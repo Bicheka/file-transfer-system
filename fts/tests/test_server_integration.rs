@@ -1,11 +1,16 @@
-use std::{net::IpAddr, str::FromStr, time::Duration};
+use std::{net::IpAddr, str::FromStr, sync::Arc, time::Duration};
 
 use fts::{client, network::Request, network::Response, server};
+use tokio::sync::Notify;
 
 #[tokio::test]
 async fn test_client(){
-    tokio::spawn(async{
-        server::api::run_api(&IpAddr::from_str("0.0.0.0").unwrap(), 8080).await.unwrap();
+    let stop_signal = Arc::new(Notify::new());
+    let stop_signal_clone = Arc::clone(&stop_signal);
+
+    tokio::spawn(async move{
+        let mut server = server::Server::new(IpAddr::from_str("0.0.0.0").unwrap(), 8080, stop_signal_clone);
+        server.start_server().await.unwrap();
     });
 
     let mut client = client::Client::new("10.0.0.123:8080");
@@ -25,5 +30,14 @@ async fn test_client(){
         Response::Ok(s) => println!("{s}"),
         Response::Err(s) => eprintln!("{s}")
     }
+
+    stop_signal.notify_waiters();
+
+    client.send_request(&Request::Get("call of duty".to_owned())).await.unwrap();
+
+    let response = client.read_response().await;
+    assert_eq!(true, response.is_err());
+
     client.close().await.unwrap();
+    
 }

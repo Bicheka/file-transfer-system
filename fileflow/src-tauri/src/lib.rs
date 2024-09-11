@@ -1,15 +1,44 @@
-use fts::server;
-use fts::network;
 use fts::p2p::upnp::upnp;
+use fts::server::Server;
+use fts::{network, server};
+use tauri::State;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
 use tauri::async_runtime::block_on;
-use tokio::task; // Use tokio for async tasks
+
+use std::sync::Arc;
+use tokio::sync::{Mutex, Notify};
+
+pub struct GlobalState {
+    server: Arc<Mutex<Option<server::Server>>>,
+    stop_signal: Arc<Notify>,
+}
+
+impl GlobalState {
+    pub fn new() -> Self {
+        Self {
+            server: Arc::new(Mutex::new(None)),
+            stop_signal: Arc::new(Notify::new()),
+        }
+    }
+
+    pub async fn get_server(&self) -> Arc<Mutex<Option<server::Server>>> {
+        self.server.clone()
+    }
+
+    pub fn get_stop_signal(&self) -> Arc<Notify> {
+        Arc::clone(&self.stop_signal)
+    }
+}
+
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let global_state = GlobalState::new();
     tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![start_server])
+    .manage(global_state)
+    .invoke_handler(tauri::generate_handler![start_server, stop_server])
     .setup(|_app| {
         block_on(start_client());
 
@@ -21,23 +50,57 @@ pub fn run() {
 }
 
 #[tauri::command]
-async fn start_server() {
-    task::spawn(async{
-        //gets local ip address creates a new socket and adds a port mapping with it
-        upnp(8080).await.unwrap();
+async fn start_server(global_state: State<'_, GlobalState>) -> Result<(), String> {
+    create_server(&global_state).await.unwrap();
+
+    let state_arc = global_state.get_server().await;
+    let arc_clone = Arc::clone(&state_arc);
     
-        let ip = network::get_local_ip().unwrap();
-        let port: u16 = 8080;
-        let mut server = server::Server::new(ip, port);
-        server.start_server().await.unwrap();
+    tokio::spawn(async move{
+        let mut lock = arc_clone.lock().await;
+        if let Some(server) = lock.as_mut() {
+            server.start_server().await.unwrap()
+        }
     });
+
+    Ok(())
 }
 
-// TODO create functionality to stop server
-// #[tauri::command]
-// async fn stop_server(){
-//     println!("stoping server")
-// }
+async fn create_server(global_state: &State<'_, GlobalState>) -> Result<(), String>{
+    
+    let stop_signal = global_state.get_stop_signal();
+    let stop_signal_clone = Arc::clone(&stop_signal);
+    
+    let port: u16 = 8080;
+    let ip = if let Ok(ip) = upnp(port).await {
+        println!("Public IP: {}", ip);
+        network::get_local_ip().expect("failed to get local IP address")
+    } else {
+        println!("Continuing using IPv6");
+        network::get_public_ip(network::IpType::IPv6).await.expect("failed to start server with IPv6")
+    };
+    let state_arc = global_state.get_server().await;
+    let mut arc_clone = state_arc.lock().await;
+    if arc_clone.is_none(){
+        let server = Server::new(ip, port, stop_signal_clone);
+        *arc_clone = Some(server);
+    }
+    else{
+        println!("server already exists")
+    }
+    Ok(())
+}
+
+
+#[tauri::command]
+async fn stop_server(global_state: State<'_, GlobalState>) -> Result<(), String> {
+    println!("Trying to stop server");
+    // Notify the stop signal
+    let stop_signal = global_state.get_stop_signal();
+    stop_signal.notify_one(); // Notify the server to stop
+    Ok(())
+}
+
 
 
 async fn start_client(){
