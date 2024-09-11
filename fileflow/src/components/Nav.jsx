@@ -16,6 +16,7 @@ function Nav(){
       setIsServerRunning(true);
     }
     async function stopServer(){
+      await invoke('stop_server');
       setIsServerRunning(false);
     }
     useEffect(() => {
