@@ -1,56 +1,94 @@
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
-use std::{io, net::{IpAddr, SocketAddr}};
+use tokio::{io::{self, AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}};
+use std::net::{IpAddr, SocketAddr};
 use bincode;
 use crate::network::{Request, Response};
+use tokio::sync::Notify;
+use std::sync::Arc;
 
 /// Starts server by listening for incomming connections
-pub async fn run_api(ip: &IpAddr, port: u16) -> io::Result<()>{
-    // listen for client connection
+pub async fn run_api(ip: &IpAddr, port: u16, stop_signal: Arc<Notify>) -> io::Result<()> {
     let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
-    println!("Server running on {}",ip);
+    println!("Server running on {}", ip);
 
     loop {
-        // Accept incoming connections
-        let (socket, addr) = listener.accept().await?;
-        println!("New connection from: {}", addr);
-        
-        // Handle the connection in a new task
-        tokio::spawn(async move {
-            if let Err(e) = handle_request(socket).await {
-                eprintln!("Error handling connection: {:?}", e);
-            }
-        });
+        tokio::select! {
+            // Wait for an incoming connection
+            result = listener.accept() => {
+                match result {
+                    Ok((socket, addr)) => {
+                        println!("New connection from: {}", addr);
+                        let stop_signal_clone = Arc::clone(&stop_signal);
+                        tokio::spawn(async move {
+                            if let Err(e) = handle_request(socket, stop_signal_clone).await {
+                                eprintln!("Error handling connection: {:?}", e);
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to accept connection: {:?}", e);
+                    }
+                }
+            },
+
+            // Wait for the stop signal
+            _ = stop_signal.notified() => {
+                println!("Stopping server...");
+                break;
+            },
+        }
     }
+    println!("loop broken");
+    Ok(())
 }
 
 /// handles connections and reads the data transmited through the socket
-pub async fn handle_request(mut socket: TcpStream) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn handle_request(
+    mut socket: TcpStream,
+    shutdown_signal: Arc<Notify>
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = [0; 1024];
     loop {
-        // Read data from the socket
-        let bytes_read = socket.read(&mut buffer).await?; // if client closes connection it reads 0
-        if bytes_read == 0 {
-            // Connection was closed
-            break;
-        }
-        // Convert the buffer to a string (assuming UTF-8 encoded data)
-        // requests can only be made from a client which serializes the request
-        let request: Request = match bincode::deserialize(&buffer[..bytes_read]) {
-            Ok(req) => req,
-            Err(e) => {
-                eprintln!("Failed to deserialize request: {:?}", e);
-                continue;
+        tokio::select! {
+            // Check if we have received a shutdown signal
+            _ = shutdown_signal.notified() => {
+                println!("Shutdown signal received. Closing connection.");
+                break;
             }
-        };
 
-        // Handle the request and generate a response
-        let response = match_request(&request).await;
+            // Read data from the socket
+            bytes_read = socket.read(&mut buffer) => {
+                match bytes_read {
+                    Ok(0) => {
+                        // Connection was closed
+                        println!("Connection closed by client.");
+                        break;
+                    }
+                    Ok(bytes_read) => {
+                        // Convert the buffer to a string (assuming UTF-8 encoded data)
+                        let request: Request = match bincode::deserialize(&buffer[..bytes_read]) {
+                            Ok(req) => req,
+                            Err(e) => {
+                                eprintln!("Failed to deserialize request: {:?}", e);
+                                continue;
+                            }
+                        };
 
-        // serialize response
-        let response = bincode::serialize(&response)?;
+                        // Handle the request and generate a response
+                        let response = match_request(&request).await;
 
-        // Send the response back to the client
-        socket.write_all(&response).await?;
+                        // Serialize response
+                        let response = bincode::serialize(&response)?;
+
+                        // Send the response back to the client
+                        socket.write_all(&response).await?;
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to read data from socket: {:?}", e);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     Ok(())
