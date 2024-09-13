@@ -5,7 +5,7 @@ import Settings from "./Settings";
 
 const MainContent = () => {
   return (
-    <main className="flex-1 p-8 sm:ml-1/5">
+    <main className="flex-1 px-1 pt-6 sm:p-8">
       <Routes>
         <Route path="/" element={<Downloads />} />
         <Route path="/uploads" element={<Uploads />} />
