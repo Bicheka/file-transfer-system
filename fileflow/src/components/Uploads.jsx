@@ -1,6 +1,5 @@
-import Path from "./Path";
-
-const data = {
+import List from "./List";
+const item = {
     name: "elden ring", 
     size: "40 GB", 
     path: "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit",
@@ -8,11 +7,13 @@ const data = {
     isTransfering: true
 };
 
+const list = [item, item, item, item, item, item, item, item, item, item, item, item]
+
 function Uploads(){
     return(
-        <div>
+        <div className="h-[900px]">
             <h1>Hello Uploads</h1>
-            <Path data={data} updown="download"/>
+            <List list={list}/>
         </div>
     );
 }
