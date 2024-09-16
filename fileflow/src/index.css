@@ -12,9 +12,9 @@
   .nav-item {
     @apply relative flex place-items-center justify-center
     w-10 h-10 mx-3 my-2 sm:mx-4 sm:my-5
-    bg-slate-900 text-[#EB3678]
-    hover:bg-[#EB3678] hover:cursor-pointer hover:text-slate-200 
-    active:bg-[#4F1787]
+    bg-[#3168ea] text-white
+    hover:bg-[#2d3953] hover:cursor-pointer hover:text-slate-200 
+    active:bg-[rgb(75,144,255)]
     rounded-3xl hover:rounded-xl
     transition-border-radius duration-300 ease-linear;
   }
@@ -22,7 +22,7 @@
 @layer components {
   .nav-tooltip {
     @apply absolute w-auto p-2 m-2 min-w-max bottom-14 sm:left-14 sm:bottom-auto
-    rounded-md shadow-lg
+    rounded-md
     text-white bg-gray-900
     text-xs font-bold
     transition-all duration-100 scale-0 origin-bottom sm:origin-left;

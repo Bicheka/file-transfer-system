@@ -4,7 +4,7 @@ import MainContent from "./components/MainContent"
 function App() {
   return (
     <Router>
-      <div className="flex flex-col sm:flex-row min-h-screen">
+      <div className="flex flex-col sm:flex-row min-h-screen bg-white max-h-full">
         <Nav/>
         <MainContent />
       </div>
