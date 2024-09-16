@@ -50,7 +50,7 @@ pub fn run() {
 }
 
 #[tauri::command]
-async fn start_server(global_state: State<'_, GlobalState>) -> Result<(), String> {
+async fn start_server(global_state: State<'_, GlobalState>) -> Result<String, String> {
     create_server(&global_state).await.unwrap();
 
     let state_arc = global_state.get_server().await;
@@ -63,7 +63,7 @@ async fn start_server(global_state: State<'_, GlobalState>) -> Result<(), String
         }
     });
 
-    Ok(())
+    Ok("Server Running".to_string())
 }
 
 async fn create_server(global_state: &State<'_, GlobalState>) -> Result<(), String>{

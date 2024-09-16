@@ -12,7 +12,8 @@ function Nav(){
     
     const [isServerRunning, setIsServerRunning] = useState(false);
     async function startServer() {
-      await invoke('start_server');
+      let response = await invoke('start_server');
+      alert(response);
       setIsServerRunning(true);
     }
     async function stopServer(){
