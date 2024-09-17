@@ -1,9 +1,26 @@
 {
+  "productName": "fileflow",
+  "version": "0.1.0",
+  "identifier": "com.fileflow.app",
   "build": {
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420"
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "fileflow",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
@@ -16,20 +33,5 @@
       "icons/icon.ico"
     ]
   },
-  "productName": "fileflow",
-  "version": "0.1.0",
-  "identifier": "com.fileflow.app",
-  "plugins": {},
-  "app": {
-    "security": {
-      "csp": null
-    },
-    "windows": [
-      {
-        "title": "fileflow",
-        "width": 800,
-        "height": 600
-      }
-    ]
-  }
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json"
 }
