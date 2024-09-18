@@ -2,7 +2,7 @@ import Item from "./Item";
 
 function List({list}){
     return (
-        <div className="h-full overflow-y-auto w-fit m-auto border-2 border-gray-200 rounded-lg">
+        <div className="h-full overflow-y-auto w-[%100] m-auto pb-16 border-2 border-gray-200 rounded-lg">
             {
                 list.map((i) =>
                     // eslint-disable-next-line react/jsx-key

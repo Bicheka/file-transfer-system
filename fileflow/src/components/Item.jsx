@@ -1,6 +1,6 @@
 function Item({ data, updown }) {
     return (
-        <div className="bg-gray-100 rounded-lg shadow-md flex flex-wrap items-center space-x-4 w-full max-w-4xl mx-auto mb-4 sm:mb-10">
+        <div className="bg-gray-100 rounded-lg shadow-md flex flex-wrap items-center space-x-4 w-[%90] max-w-4xl mx-auto mb-4 sm:mb-10">
             <div className="flex items-center space-x-1 px-4">
                 <p className="font-semibold text-gray-700 text-xs md:text-sm">Name:</p>
                 <p className="text-gray-900 text-xs md:text-sm">{data.name}</p>
