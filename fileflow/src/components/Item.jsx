@@ -11,9 +11,9 @@ function Item({ data, updown }) {
                 <p className="text-gray-900 text-xs md:text-sm">{data.size}</p>
             </div>
 
-            <div className="flex items-center space-x-1">
+            <div className="sm:flex items-center space-x-1 hidden sm:visible">
                 <p className="font-semibold text-gray-700 text-xs md:text-sm">Path:</p>
-                <p className="text-gray-900 truncate text-xs md:text-sm">{data.path}</p>
+                <p className="text-gray-900 truncate hover:text-clip overflow-hidden text-xs md:text-sm">{data.path}</p>
             </div>
             {
                 data.isTransfering && 
