@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import NavItem from "./NavItem";
 import { FaDownload, FaUpload } from "react-icons/fa6";
+import { TbPlugConnected } from "react-icons/tb";
 import { FaStop } from "react-icons/fa";
 import { IoMdSettings } from "react-icons/io";
 import { VscDebugStart } from "react-icons/vsc";
@@ -32,7 +33,9 @@ function Nav(){
             :<div onClick={startServer}><NavItem item={<VscDebugStart/>}  text={"start server"}/></div>
           }
           
-          <NavItem path="/" item={<FaDownload/>} text={"downloads"}/>
+          <NavItem path="/" item={<TbPlugConnected/>} text={"connect"}/>
+
+          <NavItem path="/downloads" item={<FaDownload/>} text={"downloads"}/>
         
           <NavItem path="/uploads" item={<FaUpload/>} text={"uploads"}/>
         
