@@ -6,7 +6,7 @@ import ServerConnectForm from "./ServerConnectForm";
 
 const MainContent = () => {
   return (
-    <main className="flex-1 px-1 pt-6 sm:p-8 bg-slate-100">
+    <main className="flex-1 px-1 pt-6 sm:p-8 bg-slate-200">
       <Routes>
         <Route path="/" element={<ServerConnectForm/>}/>
         <Route path="/downloads" element={<Downloads />} />
