@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-function NavItem({ path, item, text }){
+function NavItem({ path, item, text, isActive }){
 
     const navigate = useNavigate();
 
@@ -8,7 +8,7 @@ function NavItem({ path, item, text }){
         navigate(path)
     }
     return (
-    <div className="group nav-item" onClick={handleClick}>
+    <div className={`group nav-item ${isActive ? "rounded-md bg-blue-900" : ""}`} onClick={handleClick}>
         {item}
 
         <span className="group-hover:scale-100 nav-tooltip">
