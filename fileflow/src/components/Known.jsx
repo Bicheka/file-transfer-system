@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { RiArrowDropDownLine } from "react-icons/ri";
-
 function Known() {
   // TODO create function to get list of known ips from server
   const knownIps = [
@@ -75,8 +74,8 @@ function Known() {
     setClickedRowIndex(index === clickedRowIndex ? null : index);
   };
   return (
-    <div className="mx-auto h-[400px] w-full overflow-y-auto rounded lg:h-full">
-      <table className="min-w-full table-auto bg-white snap-start snap-y">
+    <div className="mx-auto h-[400px] md:h-[600px] w-full overflow-y-auto rounded lg:h-full">
+      <table className="min-w-full table-auto bg-white">
         <thead className="sticky top-0 z-10 bg-blue-500 text-left text-white">
           <tr>
             <th className="px-4 py-1">Name</th>
