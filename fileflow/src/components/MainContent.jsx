@@ -6,7 +6,7 @@ import Connection from "./Connection";
 
 const MainContent = () => {
   return (
-    <main className="flex-1 bg-slate-200 px-1 pt-6 sm:p-8">
+    <main className="flex-1 bg-slate-200 px-2 pt-6 sm:p-4 md:p-8 lg:p-12">
       <Routes>
         <Route path="/" element={<Connection />} />
         <Route path="/downloads" element={<Downloads />} />

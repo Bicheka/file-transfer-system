@@ -23,36 +23,28 @@ const ServerConnectForm = () => {
   };
 
   return (
-    <div className="sticky top-0 max-w-xs md:border-r-2 md:pr-10">
-      <form onSubmit={handleConnect} className="mb-4 h-full rounded bg-white">
-        <div className="mb-4">
-          <label
-            className="mb-2 block text-sm font-bold text-gray-700"
-            htmlFor="ipAddress"
-          >
-            Server IP Address
-          </label>
-          <input
-            className="focus:shadow-outlinepx-3 w-full appearance-none rounded border py-2 leading-tight text-gray-700 shadow focus:outline-none"
-            id="ipAddress"
-            type="text"
-            placeholder="Enter IP address"
-            value={ipAddress}
-            onChange={(e) => setIpAddress(e.target.value)}
-          />
-          {error && <p className="mt-2 text-xs italic text-red-500">{error}</p>}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <button
-            className="focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none"
-            type="submit"
-          >
-            Connect
-          </button>
-        </div>
-      </form>
-    </div>
+    <form
+      className="rounded px-1 py-4 xl:p-4 shadow-xs bg-white"
+      onSubmit={handleConnect}
+    >
+      <label className="mb-2 block text-sm font-bold text-gray-700">
+        IP Address
+      </label>
+      <input
+        type="text"
+        value={ipAddress}
+        onChange={(e) => setIpAddress(e.target.value)}
+        className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="Enter IP address"
+      />
+      {error && <p className="mb-4 text-red-500">{error}</p>}
+      <button
+        type="submit"
+        className="w-full rounded-lg bg-blue-500 py-2 font-bold text-white hover:bg-blue-700"
+      >
+        Connect
+      </button>
+    </form>
   );
 };
 

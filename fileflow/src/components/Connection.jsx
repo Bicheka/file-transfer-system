@@ -3,9 +3,11 @@ import ServerConnectForm from "./ServerConnectForm";
 
 function Connection() {
   return (
-    <div className="mx-auto h-[900px] w-full bg-white p-3 sm:p-10 md:flex md:w-fit md:space-x-10">
+    <div className="mx-auto w-full max-w-screen-lg transform p-3 transition-all duration-300 ease-in-out sm:p-6 md:p-10 lg:flex lg:h-[700px] lg:space-x-10">
       <ServerConnectForm />
-      <Known />
+      <div className="transform transition-all duration-300 ease-in-out">
+        <Known />
+      </div>
     </div>
   );
 }
