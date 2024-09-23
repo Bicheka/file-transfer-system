@@ -1,13 +1,13 @@
 import Known from "./Known";
 import ServerConnectForm from "./ServerConnectForm";
 
-function Connection(){
-    return (
-        <div className="md:flex h-[900px] bg-white w-full md:w-fit mx-auto md:space-x-10 p-3 sm:p-10">
-            <ServerConnectForm/>
-            <Known/>
-        </div>
-    );
+function Connection() {
+  return (
+    <div className="mx-auto h-[900px] w-full bg-white p-3 sm:p-10 md:flex md:w-fit md:space-x-10">
+      <ServerConnectForm />
+      <Known />
+    </div>
+  );
 }
 
 export default Connection;

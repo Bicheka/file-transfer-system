@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 const ServerConnectForm = () => {
   const [ipAddress, setIpAddress] = useState("");
@@ -24,34 +23,29 @@ const ServerConnectForm = () => {
   };
 
   return (
-    <div className="max-w-xs md:pr-10 md:border-r-2 sticky top-0">
-      <form
-        onSubmit={handleConnect}
-        className="bg-white rounded mb-4 h-full"
-      >
+    <div className="sticky top-0 max-w-xs md:border-r-2 md:pr-10">
+      <form onSubmit={handleConnect} className="mb-4 h-full rounded bg-white">
         <div className="mb-4">
           <label
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className="mb-2 block text-sm font-bold text-gray-700"
             htmlFor="ipAddress"
           >
             Server IP Address
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="focus:shadow-outlinepx-3 w-full appearance-none rounded border py-2 leading-tight text-gray-700 shadow focus:outline-none"
             id="ipAddress"
             type="text"
             placeholder="Enter IP address"
             value={ipAddress}
             onChange={(e) => setIpAddress(e.target.value)}
           />
-          {error && (
-            <p className="text-red-500 text-xs italic mt-2">{error}</p>
-          )}
+          {error && <p className="mt-2 text-xs italic text-red-500">{error}</p>}
         </div>
 
         <div className="flex items-center justify-between">
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none"
             type="submit"
           >
             Connect
