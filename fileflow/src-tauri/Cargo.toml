@@ -22,6 +22,7 @@ fts = { path = "../../fts", features = ["server"] }
 tokio = { version = "1.39.3", features = ["full"] }
 tauri-plugin-shell = "2.0.0-rc"
 anyhow = "1.0.87"
+tauri-plugin-dialog = "2.0.0-rc"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
