@@ -1,8 +1,8 @@
 //! Contains logic for listening for incomming connections
 
-use std::{net::IpAddr, sync::Arc};
+use std::{io, net::{IpAddr, SocketAddr}, sync::Arc};
 
-use tokio::sync::Notify;
+use tokio::{net::{TcpListener, TcpStream}, sync::Notify};
 
 /// Contains client request handling logic
 pub mod api;
@@ -31,5 +31,11 @@ impl Server{
         api::run_api(&self.ip, self.port, stop_signal).await?;
         self.is_server_running = true;
         Ok(())
+    }
+
+    pub async fn listen_connection(ip: IpAddr, port: u16) -> io::Result<(TcpStream, SocketAddr)>{
+        let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
+        let result = listener.accept().await?;
+        Ok(result)
     }
 }
