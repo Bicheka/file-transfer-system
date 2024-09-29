@@ -5,6 +5,8 @@ use crate::network::{Request, Response};
 use tokio::sync::Notify;
 use std::sync::Arc;
 
+
+
 /// Starts server by listening for incomming connections
 pub async fn run_api(ip: &IpAddr, port: u16, stop_signal: Arc<Notify>) -> io::Result<()> {
     let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
