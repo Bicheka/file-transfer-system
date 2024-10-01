@@ -12,8 +12,10 @@ pub enum Request {
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
-    Ok(String),
-    Err(String)
+    FileChunk(Vec<u8>),           // Chunk of file being transferred
+    DirectoryListing(Vec<String>), // List of files in a directory
+    TransferComplete,             // File or directory transfer complete
+    Err(String),                // In case of any error
 }
 pub enum IpType{
     IPv4,

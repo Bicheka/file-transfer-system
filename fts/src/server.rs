@@ -1,9 +1,10 @@
 //! Contains logic for listening for incomming connections
 
-use std::{io, net::{IpAddr, SocketAddr}, sync::Arc};
-
-use tokio::{net::{TcpListener, TcpStream}, sync::Notify};
-
+use tokio::{io::{self, AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
+use std::net::{IpAddr, SocketAddr};
+use bincode;
+use crate::network::{Request, Response};
+use std::sync::Arc;
 /// Module for everything related to administrate server side
 pub mod admin;
 
@@ -61,9 +62,77 @@ impl Server{
             Ok(())
     }
 
-    pub async fn listen_connection(ip: IpAddr, port: u16) -> io::Result<(TcpStream, SocketAddr)>{
+    async fn listen_connection(ip: IpAddr, port: u16) -> io::Result<(TcpStream, SocketAddr)>{
         let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
         let result = listener.accept().await?;
         Ok(result)
+    }
+
+    /// handles connections and reads the data transmited through the socket
+    async fn handle_request(
+        mut socket: TcpStream,
+        shutdown_signal: Arc<Notify>
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut buffer = [0; 1024];
+        loop {
+            tokio::select! {
+                // Check if we have received a shutdown signal
+                _ = shutdown_signal.notified() => {
+                    println!("Shutdown signal received. Closing connection.");
+                    break;
+                }
+
+                // Read data from the socket
+                bytes_read = socket.read(&mut buffer) => {
+                    match bytes_read {
+                        Ok(0) => {
+                            // Connection was closed
+                            println!("Connection closed by client.");
+                            break;
+                        }
+                        Ok(bytes_read) => {
+                            // Convert the buffer to a string (assuming UTF-8 encoded data)
+                            let request: Request = match bincode::deserialize(&buffer[..bytes_read]) {
+                                Ok(req) => req,
+                                Err(e) => {
+                                    eprintln!("Failed to deserialize request: {:?}", e);
+                                    continue;
+                                }
+                            };
+
+                            // Handle the request and generate a response
+                            let response = Self::match_request(&request).await;
+
+                            // Serialize response
+                            let response = bincode::serialize(&response)?;
+
+                            // Send the response back to the client
+                            socket.write_all(&response).await?;
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to read data from socket: {:?}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// handle the request depeding on what the request is asking for
+    async fn match_request(request: &Request) -> Response {
+        match request {
+            Request::List => {
+                println!("Handling List request");
+                Response::DirectoryListing(vec!["Available items: item1, item2, item3".to_owned()])
+            }
+            Request::Get(path) => {
+                println!("Handling Get request for: {}", path);
+                let response = format!("Content of {}", path);
+                Response::Ok(response)
+            }
+        }
     }
 }
