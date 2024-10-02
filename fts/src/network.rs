@@ -12,7 +12,7 @@ pub enum Request {
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
-    FileChunk(Vec<u8>),           // Chunk of file being transferred
+    Ok(String),
     DirectoryListing(Vec<String>), // List of files in a directory
     TransferComplete,             // File or directory transfer complete
     Err(String),                // In case of any error

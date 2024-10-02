@@ -1,6 +1,6 @@
 //! Contains logic for listening for incomming connections
 
-use tokio::{io::{self, AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
 use std::net::{IpAddr, SocketAddr};
 use bincode;
 use crate::network::{Request, Response};
@@ -40,7 +40,7 @@ impl Server{
                                 println!("New connection from: {}", addr);
                                 let stop_signal_clone = Arc::clone(&self.stop_signal);
                                 tokio::spawn(async move {
-                                    if let Err(e) = handle_request(socket, stop_signal_clone).await {
+                                    if let Err(e) = Self::handle_request(socket, stop_signal_clone).await {
                                         eprintln!("Error handling connection: {:?}", e);
                                     }
                                 });
@@ -60,12 +60,6 @@ impl Server{
             }
             println!("loop broken");
             Ok(())
-    }
-
-    async fn listen_connection(ip: IpAddr, port: u16) -> io::Result<(TcpStream, SocketAddr)>{
-        let listener = TcpListener::bind(SocketAddr::new(ip.to_owned(), port)).await?;
-        let result = listener.accept().await?;
-        Ok(result)
     }
 
     /// handles connections and reads the data transmited through the socket

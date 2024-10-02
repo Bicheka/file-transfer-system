@@ -1,94 +1,109 @@
-//! Core file transfer logic
-
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::fs::File;
-use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
-use tokio::io::AsyncWriteExt;
-use std::net::SocketAddr;
 use std::path::Path;
-use crate::network::Response;
+use std::io::Error as IoError;
 
+// Define an error type for transfer errors
+#[derive(Debug)]
+pub enum TransferError {
+    IoError(IoError),
+    ConnectionClosed,
+    FileNotFound,
+    FileCorrupted,
+    ChunkError,
+    // Other errors can be added here
+}
 
-pub struct FileSender;
-
-impl FileSender {
-    pub async fn send_file(path: &str, socket: &mut TcpStream) -> Result<(), Box<dyn std::error::Error>> {
-        let mut file = File::open(path).await?;
-        let mut buffer = [0; 1024];
-
-        loop {
-            let bytes_read = file.read(&mut buffer).await?;
-            if bytes_read == 0 {
-                break; // End of file
-            }
-
-            let chunk = &buffer[..bytes_read];
-            let serialized_chunk = bincode::serialize(&Response::FileChunk(chunk.to_vec()))?;
-            socket.write_all(&serialized_chunk).await?;
-        }
-
-        // Indicate transfer completion
-        let serialized_response = bincode::serialize(&Response::TransferComplete)?;
-        socket.write_all(&serialized_response).await?;
-
-        Ok(())
+impl From<IoError> for TransferError {
+    fn from(err: IoError) -> TransferError {
+        TransferError::IoError(err)
     }
 }
 
-pub async fn send_file_to_peer(addr: SocketAddr, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut socket = TcpStream::connect(addr).await?;
-    println!("Sending file to peer at {}", addr);
-
-    let mut file = tokio::fs::File::open(file_path).await?;
-    let mut buffer = [0; 1024];
-
-    loop {
-        let n = file.read(&mut buffer).await?;
-        if n == 0 {
-            break;
-        }
-
-        socket.write_all(&buffer[..n]).await?;
-    }
-
-    println!("File sent successfully to peer");
-    Ok(())
+// Simplified Connection struct using only TcpStream
+pub struct Connection {
+    pub stream: TcpStream,
 }
 
+impl Connection {
+    // Example of writing to the TCP connection
+    pub async fn write(&mut self, data: &[u8]) -> Result<(), TransferError> {
+        self.stream.write_all(data).await.map_err(TransferError::IoError)
+    }
 
+    // Example of reading from the TCP connection
+    pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, TransferError> {
+        self.stream.read(buffer).await.map_err(TransferError::IoError)
+    }
+}
 
-pub struct DirectoryReceiver;
+// Define the file transfer protocol
+pub struct FileTransferProtocol {
+    pub filename: String,
+    pub file_size: u64,
+    pub chunk_size: u64,
+    pub checksum: Option<String>,  // Optional checksum for integrity
+}
 
-impl DirectoryReceiver {
-    pub async fn receive_directory(mut socket: TcpStream, save_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let save_path = Path::new(save_dir);
+impl FileTransferProtocol {
+    // Initialize the file transfer protocol
+    pub fn new(filename: String, file_size: u64, chunk_size: u64) -> Self {
+        FileTransferProtocol {
+            filename,
+            file_size,
+            chunk_size,
+            checksum: None,
+        }
+    }
 
+    // Send file logic over TCP
+    pub async fn send_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
+        let path = Path::new(&self.filename);
+        let mut file = File::open(path).await.map_err(|_| TransferError::FileNotFound)?;
+
+        let mut buffer = vec![0u8; self.chunk_size as usize];
+        let mut total_bytes_sent = 0;
+
+        // Read the file chunk by chunk and send it over the connection
         loop {
-            let mut buffer = [0; 1024];
-            let bytes_read = socket.read(&mut buffer).await?;
-
-            if bytes_read == 0 {
+            let n = file.read(&mut buffer).await.map_err(TransferError::from)?;
+            if n == 0 {
                 break;
             }
 
-            let response: Response = bincode::deserialize(&buffer[..bytes_read])?;
+            // Send the chunk over the TCP connection
+            connection.write(&buffer[..n]).await?;
+            total_bytes_sent += n as u64;
 
-            match response {
-                Response::FileChunk(chunk) => {
-                    // Write each file chunk into the appropriate file
-                    // Here, you could extract filenames and save each file accordingly
-                    println!("Received file chunk");
-                }
-                Response::TransferComplete => {
-                    println!("Directory transfer complete.");
-                    break;
-                }
-                Response::Err(err) => {
-                    eprintln!("Error: {}", err);
-                    break;
-                }
-                _ => (),
+            // Optional: You can implement progress reporting
+            println!("Sent {} bytes of {} total.", total_bytes_sent, self.file_size);
+        }
+
+        Ok(())
+    }
+
+    // Receive file logic over TCP
+    pub async fn receive_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
+        let path = Path::new(&self.filename);
+        let mut file = File::create(path).await.map_err(TransferError::from)?;
+
+        let mut buffer = vec![0u8; self.chunk_size as usize];
+        let mut total_bytes_received = 0;
+
+        // Receive the file chunk by chunk and write it to the file
+        loop {
+            let n = connection.read(&mut buffer).await?;
+            if n == 0 {
+                break;
             }
+
+            // Write the chunk to the file
+            file.write_all(&buffer[..n]).await.map_err(TransferError::from)?;
+            total_bytes_received += n as u64;
+
+            // Optional: You can implement progress reporting
+            println!("Received {} bytes of {} total.", total_bytes_received, self.file_size);
         }
 
         Ok(())
