@@ -21,14 +21,16 @@ async fn test_client(){
     let response = client.read_response().await.unwrap();
     match response {
         Response::Ok(s) => println!("{s}"),
-        Response::Err(s) => eprintln!("{s}")
+        Response::Err(s) => eprintln!("{s}"),
+        _ => println!("")
     }
     
     client.send_request(&Request::Get("call of duty".to_owned())).await.unwrap();
     let response = client.read_response().await.unwrap();
     match response {
         Response::Ok(s) => println!("{s}"),
-        Response::Err(s) => eprintln!("{s}")
+        Response::Err(s) => eprintln!("{s}"),
+        _ => println!("")
     }
 
     stop_signal.notify_waiters();
