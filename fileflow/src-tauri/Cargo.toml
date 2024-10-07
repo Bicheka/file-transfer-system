@@ -23,6 +23,7 @@ tokio = { version = "1.39.3", features = ["full"] }
 tauri-plugin-shell = "2.0.1"
 anyhow = "1.0.87"
 tauri-plugin-dialog = "2.0.1"
+tauri-plugin-os = "2"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
