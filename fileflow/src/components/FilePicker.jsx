@@ -8,14 +8,11 @@ const FilePicker = () => {
     try {
       // Open the file/folder picker dialog
       const currentPlatform = await platform();
-      let directoryAllowed = true;
-      if (currentPlatform === 'ios' | currentPlatform === 'android'){
-        directoryAllowed = false
-      }
-      const path = await open({
-        directory: directoryAllowed, // Set to `true` if you want to select a folder
-        multiple: false, // Set to `true` if you want to select multiple files
-      });
+      let path = await open({
+          directory: false,
+          recursive: true,
+          multiple: true,
+        });
 
       // Set the selected path
       if (path) {
