@@ -1,5 +1,4 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { platform } from "@tauri-apps/plugin-os";
 import { useState } from "react";
 const FilePicker = () => {
   const [selectedPath, setSelectedPath] = useState("");
@@ -7,7 +6,6 @@ const FilePicker = () => {
   const selectFileOrFolder = async () => {
     try {
       // Open the file/folder picker dialog
-      const currentPlatform = await platform();
       let path = await open({
           directory: false,
           recursive: true,
