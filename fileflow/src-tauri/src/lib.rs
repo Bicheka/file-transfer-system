@@ -1,7 +1,7 @@
 use fts::p2p::upnp::upnp;
 use fts::server::Server;
 use fts::{network, server};
-use tauri::{AppHandle, State};
+use tauri::State;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
 use std::sync::Arc;
