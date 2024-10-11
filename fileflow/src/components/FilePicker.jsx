@@ -6,10 +6,11 @@ const FilePicker = () => {
   const selectFileOrFolder = async () => {
     try {
       // Open the file/folder picker dialog
-      const path = await open({
-        directory: true, // Set to `true` if you want to select a folder
-        multiple: false, // Set to `true` if you want to select multiple files
-      });
+      let path = await open({
+          directory: false,
+          recursive: true,
+          multiple: true,
+        });
 
       // Set the selected path
       if (path) {

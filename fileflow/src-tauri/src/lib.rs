@@ -4,9 +4,8 @@ use fts::{network, server};
 use tauri::State;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
-use tauri::async_runtime::block_on;
-
 use std::sync::Arc;
+use tauri::async_runtime::block_on;
 use tokio::sync::{Mutex, Notify};
 
 pub struct GlobalState {
@@ -31,23 +30,22 @@ impl GlobalState {
     }
 }
 
-
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let global_state = GlobalState::new();
     tauri::Builder::default()
-    .manage(global_state)
-    .invoke_handler(tauri::generate_handler![start_server, stop_server])
-    .setup(|_app| {
-        block_on(start_client());
+        .plugin(tauri_plugin_os::init())
+        .manage(global_state)
+        .invoke_handler(tauri::generate_handler![start_server, stop_server])
+        .setup(|_app| {
+            block_on(start_client());
 
-        Ok(())
-    })
-    .plugin(tauri_plugin_shell::init())
-    .plugin(tauri_plugin_dialog::init())
-    .run(tauri::generate_context!())
-    .expect("error while running the application");
+            Ok(())
+        })
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .run(tauri::generate_context!())
+        .expect("error while running the application");
 }
 
 #[tauri::command]
@@ -56,8 +54,8 @@ async fn start_server(global_state: State<'_, GlobalState>) -> Result<String, St
 
     let state_arc = global_state.get_server().await;
     let arc_clone = Arc::clone(&state_arc);
-    
-    tokio::spawn(async move{
+
+    tokio::spawn(async move {
         let mut lock = arc_clone.lock().await;
         if let Some(server) = lock.as_mut() {
             server.start_server().await.unwrap()
@@ -67,31 +65,30 @@ async fn start_server(global_state: State<'_, GlobalState>) -> Result<String, St
     Ok("Server Running".to_string())
 }
 
-async fn create_server(global_state: &State<'_, GlobalState>) -> Result<(), String>{
-    
+async fn create_server(global_state: &State<'_, GlobalState>) -> Result<(), String> {
     let stop_signal = global_state.get_stop_signal();
     let stop_signal_clone = Arc::clone(&stop_signal);
-    
+
     let port: u16 = 8080;
     let ip = if let Ok(ip) = upnp(port).await {
         println!("Public IP: {}", ip);
         network::get_local_ip().expect("failed to get local IP address")
     } else {
         println!("Continuing using IPv6");
-        network::get_public_ip(network::IpType::IPv6).await.expect("failed to start server with IPv6")
+        network::get_public_ip(network::IpType::IPv6)
+            .await
+            .expect("failed to start server with IPv6")
     };
     let state_arc = global_state.get_server().await;
     let mut arc_clone = state_arc.lock().await;
-    if arc_clone.is_none(){
+    if arc_clone.is_none() {
         let server = Server::new(ip, port, stop_signal_clone);
         *arc_clone = Some(server);
-    }
-    else{
+    } else {
         println!("server already exists")
     }
     Ok(())
 }
-
 
 #[tauri::command]
 async fn stop_server(global_state: State<'_, GlobalState>) -> Result<(), String> {
@@ -102,8 +99,6 @@ async fn stop_server(global_state: State<'_, GlobalState>) -> Result<(), String>
     Ok(())
 }
 
-
-
-async fn start_client(){
+async fn start_client() {
     println!("starting client")
 }
