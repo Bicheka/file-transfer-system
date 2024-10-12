@@ -3,10 +3,6 @@ The goal for this project is to allow anyone to be able to send any file/s of la
 
 ![alt text](fts.png)
 
-<p>
-    Server is going to be like the Client that connects to an API reciever
-    if the reciever acepts the request then the client can send the file/s
-</p>
 This project is in a stage where it is still defining its structure so it might be subject of major changes
 
 If you want to build the app you can cd into /fileflow and then follow the README instructions to run in it in dev mode or to compile the executable
