@@ -1,4 +1,4 @@
-use fts::p2p::upnp;
+use file_transfer_system::p2p::upnp;
 
 #[tokio::test]
 async fn test_upnp(){

@@ -1,4 +1,4 @@
-use fts::network::{get_local_ip, get_public_ip, IpType};
+use file_transfer_system::network::{get_local_ip, get_public_ip, IpType};
 
 #[tokio::test]
 async fn test_get_public_ip(){

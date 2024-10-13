@@ -1,6 +1,6 @@
-use fts::p2p::upnp::upnp;
-use fts::server::Server;
-use fts::{network, server};
+use file_transfer_system::p2p::upnp::upnp;
+use file_transfer_system::server::Server;
+use file_transfer_system::{network, server};
 use tauri::State;
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 

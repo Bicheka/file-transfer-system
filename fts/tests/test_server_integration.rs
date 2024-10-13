@@ -1,6 +1,6 @@
 use std::{net::IpAddr, str::FromStr, sync::Arc, time::Duration};
 
-use fts::{client, network::Request, network::Response, server};
+use file_transfer_system::{client, network::Request, network::Response, server};
 use tokio::sync::Notify;
 
 #[tokio::test]
