@@ -5,8 +5,6 @@ use std::net::{IpAddr, SocketAddr};
 use bincode;
 use crate::network::{Request, Response};
 use std::sync::Arc;
-/// Module for everything related to administrate server side
-pub mod admin;
 
 pub struct Server{
     pub is_server_running: bool,
