@@ -29,3 +29,6 @@ full = ["server", "p2p", "network"]
 server = ["network"]
 p2p = []
 network = []
+
+[package.metadata.docs.rs]
+features = ["full"]
