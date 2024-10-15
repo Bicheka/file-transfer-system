@@ -9,11 +9,11 @@ async fn test_client(){
     let stop_signal_clone = Arc::clone(&stop_signal);
 
     tokio::spawn(async move{
-        let mut server = server::Server::new(IpAddr::from_str("0.0.0.0").unwrap(), 8080, stop_signal_clone);
+        let mut server = server::Server::new(IpAddr::from_str("127.0.0.1").unwrap(), 8080, stop_signal_clone);
         server.start_server().await.unwrap();
     });
 
-    let mut client = client::Client::new("10.0.0.123:8080");
+    let mut client = client::Client::new("127.0.0.1:8090");
     client.set_timeout(Duration::from_secs(10));
     client.connect().await.unwrap();
     client.send_request(&Request::List).await.unwrap();
