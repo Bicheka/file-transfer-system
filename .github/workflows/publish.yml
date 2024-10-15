@@ -5,54 +5,12 @@ on:
     branches: [ "main" ]
 
 name: Publish
-
 jobs:
-  audit:
-    name: Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bp3d-actions/audit-check@9c23bd47e5e7b15b824739e0862cb878a52cc211
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  build_and_test_linux:
-    name: Build and Test (Linux)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: taiki-e/install-action@nextest
-      - name: 'Build and test'
-        run: cargo nextest run --all-features
-
-  build_and_test_windows:
-    name: Build and Test (Windows)
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - name: Prepare symlink configuration
-        run: git config --global core.symlinks true
-
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: taiki-e/install-action@nextest
-      - name: 'Build and test'
-        run: cargo nextest run --all-features
-
   crates_io_publish:
     name: Publish (crates.io)
-    needs:
-      - audit
-      - build_and_test_linux
-      - build_and_test_windows
 
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -78,5 +36,4 @@ jobs:
             --all-features \
             --allow-branch HEAD \
             --no-confirm \
-            --no-verify \
             --execute
