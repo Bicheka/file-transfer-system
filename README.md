@@ -32,7 +32,7 @@ cargo test
 
 To run a test that is inside a feature
 ```
-cargo test --feature feature-name module-name::tests::test-function-name
+cargo test --features feature-name module-name::tests::test-function-name
 ```
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

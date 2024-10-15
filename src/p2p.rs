@@ -67,6 +67,6 @@ mod tests {
     #[tokio::test]
     async fn test_upnp() {
         let ip = upnp::upnp(8080).await;
-        assert_eq!(ip, Ok(_));
+        assert_eq!(ip.is_ok(), true);
     }
 }
