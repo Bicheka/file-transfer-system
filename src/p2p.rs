@@ -10,14 +10,13 @@ pub async fn traverse_nat(){
     }
 
 }
-/// automates the process of allowing an application to operate through NAT, maps local ip address to router gateway
+/// maps local ip address to router gateway, automates the process of allowing an application to operate through NAT
 pub mod upnp{
     use igd::{search_gateway, Error, Gateway, PortMappingProtocol};
     use core::net::SocketAddrV4;
     use core::net::IpAddr;
     use std::net::Ipv4Addr;
     use crate::network::get_local_ip;
-
 
     /// gets local ip address creates a new socket and adds a port mapping with it
     pub async fn upnp(port: u16) -> anyhow::Result<Ipv4Addr>{
@@ -50,11 +49,24 @@ pub mod upnp{
         let ip = gateway.get_external_ip()?;
         Ok(ip)
     }
-    
+    /// removes port mapping for cleanup, call it when port mapping is not longer needed
     pub async fn remove_port_mapping(port: u16) -> Result<(), Box<dyn std::error::Error>> { 
         let gateway = discover_gateway()?;
         gateway.remove_port(PortMappingProtocol::TCP, port)?;
         Ok(())
     }
 
+}
+
+#[cfg(test)]
+#[cfg(feature = "p2p")]  // Ensure the test only runs when the `p2p` feature is enabled
+mod tests {
+    use super::*;
+    use tokio;
+
+    #[tokio::test]
+    async fn test_upnp() {
+        let ip = upnp::upnp(8080).await;
+        assert_eq!(ip, Ok(_));
+    }
 }
