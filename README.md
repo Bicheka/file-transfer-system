@@ -1,26 +1,28 @@
 # File transfer system (FTS)
-The goal for this project is to allow anyone to be able to send any file/s of large size directly to any other device securely and blazingly fast.
-
 ![alt text](fts.png)
+A file transfer system library that provides functionality to send files of any size through TCP
 
-This project is in a stage where it is still defining its structure so it might be subject of major changes
+## Provides functionality for:
+- File transfering and folder recursive transfering
+- NAT traversal for p2p connection and IPV6
+- Functionality to get current device private and public IP address
+- Uses multithreaded tokio runtime to asynchronously send files and process file requests
+
 
 If you want to build the app you can cd into /fileflow and then follow the README instructions to run in it in dev mode or to compile the executable
 
 ## Project architecture
 
-This project repository is basically a cargo workspace with multiples crates
+***This project is in a stage where it is still defining its structure so it might be subject of major changes***
 ```
-./ fileflow------ // combines functionality for server and client into one app using tauri which allows it to build for all mobiles and desktop
-./ fts--------- // core library, where most of the code for the lives
-    |-server
-        |-api
-        |-admin
-    |-client
-    |-p2p
-    |-network
-    |-file_transfer
-    |-graceful_shutdown
+./ src--------- // core library, where most of the code for the lives
+  |-lib  
+    -    client
+    -    file_transfer
+    -    graceful_shutdown
+    -    network
+    -    p2p
+    -    server
 ```
 ### Testing
 test all
@@ -30,7 +32,7 @@ cargo test
 
 To run a test that is inside a feature
 ```
-cargo test -p package-name --feature feature-name module-name::tests::test-function-name
+cargo test --feature feature-name module-name::tests::test-function-name
 ```
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
