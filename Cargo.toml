@@ -6,7 +6,8 @@ license = "MIT"
 repository = "https://github.com/Bicheka/file-transfer-system"
 description = "Contains file transfering, networking, and p2p functionality"
 keywords = ["p2p", "file", "tcp", "network"]
-
+readme = "CRATESIO.md"
+exclude = ["README"]
 [badges]
 maintenance = { status = "actively-developed" }
 

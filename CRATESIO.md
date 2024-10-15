@@ -24,15 +24,5 @@ Check Fileflow which is a tauri app for sending files that implements this libra
     -    p2p
     -    server
 ```
-### Testing
-test all
-```
-cargo test
-```
-
-To run a test that is inside a feature
-```
-cargo test --feature feature-name module-name::tests::test-function-name
-```
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
