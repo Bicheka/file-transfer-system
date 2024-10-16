@@ -13,7 +13,7 @@ async fn test_client(){
         server.start_server().await.unwrap();
     });
 
-    let mut client = client::Client::new("127.0.0.1:8090");
+    let mut client = client::Client::new("127.0.0.1:8080");
     client.set_timeout(Duration::from_secs(10));
     client.connect().await.unwrap();
     client.send_request(&Request::List).await.unwrap();
