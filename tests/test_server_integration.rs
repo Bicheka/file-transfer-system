@@ -1,6 +1,6 @@
 use std::{net::IpAddr, str::FromStr, sync::Arc, time::Duration};
 
-use file_transfer_system::{client, network::Request, network::Response, server};
+use file_transfer_system::{client, file_transfer::FileMetadata, network::{Request, Response}, server};
 use tokio::sync::Notify;
 
 #[tokio::test]
@@ -22,7 +22,7 @@ async fn test_client(){
     match response {
         Response::Ok(s) => println!("{s}"),
         Response::Err(s) => eprintln!("{s}"),
-        _ => println!("")
+        Response::DirectoryListing(hm) => println!("{:?}", FileMetadata::from_bytes(hm.get("elden ring").unwrap()))
     }
     
     client.send_request(&Request::Get("call of duty".to_owned())).await.unwrap();

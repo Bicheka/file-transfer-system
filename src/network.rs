@@ -1,8 +1,10 @@
 //! networking logic
-use std::{net::IpAddr, str::FromStr};
+use std::{collections::HashMap, net::IpAddr, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
+
+use crate::file_transfer::FileMetadata;
 
 #[derive(Serialize, Deserialize)]
 pub enum Request {
@@ -13,8 +15,7 @@ pub enum Request {
 #[derive(Serialize, Deserialize)]
 pub enum Response {
     Ok(String),
-    DirectoryListing(Vec<String>), // List of files in a directory
-    TransferComplete,             // File or directory transfer complete
+    DirectoryListing(HashMap<String, Vec<u8>>), // List of files in a director
     Err(String),                // In case of any error
 }
 pub enum IpType{
