@@ -1,9 +1,9 @@
 //! Contains logic for listening for incomming connections
 
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
-use std::net::{IpAddr, SocketAddr};
+use std::{collections::HashMap, net::{IpAddr, SocketAddr}};
 use bincode;
-use crate::network::{Request, Response};
+use crate::{file_transfer::FileMetadata, network::{Request, Response}};
 use std::sync::Arc;
 
 pub struct Server{
@@ -117,14 +117,22 @@ impl Server{
     async fn match_request(request: &Request) -> Response {
         match request {
             Request::List => {
-                println!("Handling List request");
-                Response::DirectoryListing(vec!["Available items: item1, item2, item3".to_owned()])
-            }
+                // Call your get_list function here, for example:
+                Response::DirectoryListing(Self::get_list().await)
+            },
             Request::Get(path) => {
                 println!("Handling Get request for: {}", path);
                 let response = format!("Content of {}", path);
                 Response::Ok(response)
             }
         }
+    }
+    // TODO allow to store a list of the files in the disk
+
+    pub async fn get_list() -> HashMap<String, Vec<u8>>{
+        let file = FileMetadata::File { path: "/example".to_owned(), size: 23 };
+        HashMap::from([
+            ("elden ring".to_owned(), file.to_bytes())
+        ])
     }
 }
