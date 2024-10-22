@@ -4,17 +4,19 @@ use std::{collections::HashMap, net::IpAddr, str::FromStr};
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
 
-use crate::file_transfer::FileMetadata;
+use crate::file_transfer::FileSystemObjectMetadata;
+
 
 #[derive(Serialize, Deserialize)]
 pub enum Request {
     List, // list of file names/paths
     Get(String), // get("filename/path")
+    Upload(FileSystemObjectMetadata)
 }
 
 #[derive(Serialize, Deserialize)]
 pub enum Response {
-    Ok(String),
+    Ok,
     DirectoryListing(HashMap<String, Vec<u8>>), // List of files in a director
     Err(String),                // In case of any error
 }

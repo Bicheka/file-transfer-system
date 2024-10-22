@@ -1,6 +1,6 @@
 use std::{net::IpAddr, str::FromStr, sync::Arc, time::Duration};
 
-use file_transfer_system::{client, file_transfer::FileMetadata, network::{Request, Response}, server};
+use file_transfer_system::{client, file_transfer::FileSystemObjectMetadata, network::{Request, Response}, server};
 use tokio::sync::Notify;
 
 #[tokio::test]
@@ -20,15 +20,15 @@ async fn test_client(){
 
     let response = client.read_response().await.unwrap();
     match response {
-        Response::Ok(s) => println!("{s}"),
+        Response::Ok => println!("OK"),
         Response::Err(s) => eprintln!("{s}"),
-        Response::DirectoryListing(hm) => println!("{:?}", FileMetadata::from_bytes(hm.get("elden ring").unwrap()))
+        Response::DirectoryListing(hm) => println!("{:?}", FileSystemObjectMetadata::from_bytes(hm.get("elden ring").unwrap()))
     }
     
     client.send_request(&Request::Get("call of duty".to_owned())).await.unwrap();
     let response = client.read_response().await.unwrap();
     match response {
-        Response::Ok(s) => println!("{s}"),
+        Response::Ok => println!("OK"),
         Response::Err(s) => eprintln!("{s}"),
         _ => println!("")
     }

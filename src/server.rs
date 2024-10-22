@@ -1,11 +1,12 @@
 //! Contains logic for listening for incomming connections
 
+use async_trait::async_trait;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
 use std::{collections::HashMap, net::{IpAddr, SocketAddr}};
 use bincode;
-use crate::{file_transfer::FileMetadata, network::{Request, Response}};
+use crate::{file_transfer::FileSystemObjectMetadata, network::{Request, Response}};
 use std::sync::Arc;
-
+#[derive(Debug, Clone)]
 pub struct Server{
     pub is_server_running: bool,
     pub ip: IpAddr,
@@ -37,8 +38,9 @@ impl Server{
                             Ok((socket, addr)) => {
                                 println!("New connection from: {}", addr);
                                 let stop_signal_clone = Arc::clone(&self.stop_signal);
-                                tokio::spawn(async move {
-                                    if let Err(e) = Self::handle_request(socket, stop_signal_clone).await {
+                                let server_clone = self.clone();
+                                tokio::spawn(async {
+                                    if let Err(e) = server_clone.handle_request(socket, stop_signal_clone).await {
                                         eprintln!("Error handling connection: {:?}", e);
                                     }
                                 });
@@ -62,6 +64,7 @@ impl Server{
 
     /// handles connections and reads the data transmited through the socket
     async fn handle_request(
+        self,
         mut socket: TcpStream,
         shutdown_signal: Arc<Notify>
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -93,7 +96,7 @@ impl Server{
                             };
 
                             // Handle the request and generate a response
-                            let response = Self::match_request(&request).await;
+                            let response = self.match_request(&request).await;
 
                             // Serialize response
                             let response = bincode::serialize(&response)?;
@@ -114,25 +117,36 @@ impl Server{
     }
 
     /// handle the request depeding on what the request is asking for
-    async fn match_request(request: &Request) -> Response {
+    async fn match_request(&self, request: &Request) -> Response {
         match request {
+            // get a list of available files/dir
             Request::List => {
                 // Call your get_list function here, for example:
-                Response::DirectoryListing(Self::get_list().await)
+                Response::DirectoryListing(self.get_list().await)
             },
+            // client requests to GET certain files and server sends them
             Request::Get(path) => {
-                println!("Handling Get request for: {}", path);
-                let response = format!("Content of {}", path);
-                Response::Ok(response)
+                self.handle_get_fs_object(path).await
+            },
+            // handles files/dir sent by client
+            Request::Upload(metadata) => {
+                Self::recieve_fs_object(metadata).await
             }
         }
     }
     // TODO allow to store a list of the files in the disk
 
-    pub async fn get_list() -> HashMap<String, Vec<u8>>{
-        let file = FileMetadata::File { path: "/example".to_owned(), size: 23 };
-        HashMap::from([
-            ("elden ring".to_owned(), file.to_bytes())
-        ])
+    async fn get_list(&self) -> HashMap<String, Vec<u8>>{
+        todo!()
     }
+
+    async fn handle_get_fs_object(&self, path: &str) -> Response{
+        Response::Ok
+    }
+
+    async fn recieve_fs_object(metadata: &FileSystemObjectMetadata) -> Response{
+        todo!()
+    }
+
+    // let  = HashMap::from(value);
 }
