@@ -23,7 +23,7 @@ impl From<IoError> for TransferError {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FileSystemObjectMetadata {
     File { path: String, size_bytes: u64 },
     Directory { path: String },
@@ -60,25 +60,24 @@ impl Connection {
 
 // Define the file transfer protocol
 pub struct FileTransferProtocol {
-    pub filename: String,
-    pub file_size: u64,
+
+    pub path: String,
     pub chunk_size: u64,
     pub checksum: Option<String>,  // Optional checksum for integrity
 }
 
 impl FileTransferProtocol {
     // Initialize the file transfer protocol
-    pub fn new(filename: String, file_size: u64, chunk_size: u64) -> Self {
+    pub fn new(path: &str, chunk_size: u64) -> Self {
         FileTransferProtocol {
-            filename,
-            file_size,
+            path: path.to_owned(),
             chunk_size,
-            checksum: None,
+            checksum: None
         }
     }
     // Send file logic over TCP
     pub async fn send_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
-        let path = Path::new(&self.filename);
+        let path = Path::new(&self.path);
         let mut file = File::open(path).await.map_err(|_| TransferError::FileNotFound)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
@@ -95,8 +94,8 @@ impl FileTransferProtocol {
             connection.write(&buffer[..n]).await?;
             total_bytes_sent += n as u64;
 
-            // Optional: You can implement progress reporting
-            println!("Sent {} bytes of {} total.", total_bytes_sent, self.file_size);
+            // TODO implement progress reporting
+            println!("Received {} bytes", total_bytes_sent);
         }
 
         Ok(())
@@ -104,7 +103,7 @@ impl FileTransferProtocol {
 
     // Receive file logic over TCP
     pub async fn receive_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
-        let path = Path::new(&self.filename);
+        let path = Path::new(&self.path);
         let mut file = File::create(path).await.map_err(TransferError::from)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
@@ -122,7 +121,7 @@ impl FileTransferProtocol {
             total_bytes_received += n as u64;
 
             // Optional: You can implement progress reporting
-            println!("Received {} bytes of {} total.", total_bytes_received, self.file_size);
+            println!("Received {} bytes", total_bytes_received);
         }
 
         Ok(())
@@ -155,14 +154,12 @@ impl FileTransferProtocol {
 
                     // Send the file content
                     let file_transfer = FileTransferProtocol::new(
-                        entry_path.to_string_lossy().into(),
-                        metadata.len(),
+                        entry_path.to_str().expect("could not parse entry path into str"),
                         self.chunk_size,
                     );
                     file_transfer.send_file(connection).await?;
                 }
             }
-
             Ok(())
         })
     }
@@ -186,7 +183,7 @@ impl FileTransferProtocol {
                 }
                 FileSystemObjectMetadata::File { path, size_bytes } => {
                     // Receive the file
-                    let file_transfer = FileTransferProtocol::new(path.clone(), size_bytes, self.chunk_size);
+                    let file_transfer = FileTransferProtocol::new(path.clone().as_str(), self.chunk_size);
                     file_transfer.receive_file(connection).await?;
                 }
             }

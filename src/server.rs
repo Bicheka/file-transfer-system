@@ -1,65 +1,79 @@
 //! Contains logic for listening for incomming connections
-
-use async_trait::async_trait;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
 use std::{collections::HashMap, net::{IpAddr, SocketAddr}};
 use bincode;
-use crate::{file_transfer::FileSystemObjectMetadata, network::{Request, Response}};
+use crate::{file_transfer::{self, FileSystemObjectMetadata}, network::{Request, Response}};
 use std::sync::Arc;
-#[derive(Debug, Clone)]
+
+#[derive(Clone)]
+pub struct List{
+    // filename: data
+    pub file_list: HashMap<String, FileSystemObjectMetadata>
+}
+impl List{
+    fn new() -> Self{
+        List{file_list: HashMap::new()}
+    }
+}
+
+#[derive(Clone)]
 pub struct Server{
     pub is_server_running: bool,
     pub ip: IpAddr,
     pub port: u16,
+    pub chunk_size: u64,
     stop_signal: Arc<Notify>, // Add a stop signal
+    file_list: List
 }
-
 impl Server{
     /// Creates new instance of server
-    pub fn new(ip: IpAddr, port: u16, stop_signal: Arc<Notify>) -> Self{
+    pub fn new(ip: IpAddr, port: u16, chunk_size: u64) -> Self{
+        let shutdown = Arc::new(Notify::new());
         Self {
             is_server_running: false,
             ip,
             port,
-            stop_signal,
+            chunk_size,
+            stop_signal: shutdown,
+            file_list: List::new()
         }
     }
 
     /// Starts server by listening for incomming connections
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
-            println!("Server running on {}", self.ip);
+        println!("Server running on {}", self.ip);
 
-            loop {
-                tokio::select! {
-                    // Wait for an incoming connection
-                    result = listener.accept() => {
-                        match result {
-                            Ok((socket, addr)) => {
-                                println!("New connection from: {}", addr);
-                                let stop_signal_clone = Arc::clone(&self.stop_signal);
-                                let server_clone = self.clone();
-                                tokio::spawn(async {
-                                    if let Err(e) = server_clone.handle_request(socket, stop_signal_clone).await {
-                                        eprintln!("Error handling connection: {:?}", e);
-                                    }
-                                });
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to accept connection: {:?}", e);
-                            }
+        loop {
+            tokio::select! {
+                // Wait for an incoming connection
+                result = listener.accept() => {
+                    match result {
+                        Ok((socket, addr)) => {
+                            println!("New connection from: {}", addr);
+                            let stop_signal_clone = Arc::clone(&self.stop_signal);
+                             let self_clone = self.clone();
+                            tokio::spawn(async {
+                                if let Err(e) = self_clone.handle_request(socket, stop_signal_clone).await {
+                                    eprintln!("Error handling connection: {:?}", e);
+                                }
+                            });
                         }
-                    },
+                        Err(e) => {
+                            eprintln!("Failed to accept connection: {:?}", e);
+                        }
+                    }
+                },
 
-                    // Wait for the stop signal
-                    _ = self.stop_signal.notified() => {
-                        println!("Stopping server...");
-                        break;
-                    },
-                }
+                // Wait for the stop signal
+                _ = self.stop_signal.notified() => {
+                    println!("Stopping server...");
+                    break;
+                },
             }
-            println!("loop broken");
-            Ok(())
+        }
+        println!("loop broken");
+        Ok(())
     }
 
     /// handles connections and reads the data transmited through the socket
@@ -141,6 +155,11 @@ impl Server{
     }
 
     async fn handle_get_fs_object(&self, path: &str) -> Response{
+        let metadata = self.file_list.file_list.get(path).expect("Not found");
+        match metadata {
+            FileSystemObjectMetadata::File { path, size_bytes } => file_transfer::FileTransferProtocol::new(path, self.chunk_size),
+            FileSystemObjectMetadata::Directory { path } => todo!(),
+        };
         Response::Ok
     }
 
@@ -150,3 +169,4 @@ impl Server{
 
     // let  = HashMap::from(value);
 }
+
