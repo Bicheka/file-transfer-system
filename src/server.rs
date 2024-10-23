@@ -1,67 +1,84 @@
 //! Contains logic for listening for incomming connections
-
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
 use std::{collections::HashMap, net::{IpAddr, SocketAddr}};
 use bincode;
-use crate::{file_transfer::FileMetadata, network::{Request, Response}};
+use crate::{file_transfer::{self, FileSystemObjectMetadata}, network::{Request, Response}};
 use std::sync::Arc;
 
+#[derive(Clone)]
+pub struct List{
+    // filename: data
+    pub file_list: HashMap<String, FileSystemObjectMetadata>
+}
+impl List{
+    fn new() -> Self{
+        List{file_list: HashMap::new()}
+    }
+}
+
+#[derive(Clone)]
 pub struct Server{
     pub is_server_running: bool,
     pub ip: IpAddr,
     pub port: u16,
+    pub chunk_size: u64,
     stop_signal: Arc<Notify>, // Add a stop signal
+    file_list: List
 }
-
 impl Server{
     /// Creates new instance of server
-    pub fn new(ip: IpAddr, port: u16, stop_signal: Arc<Notify>) -> Self{
+    pub fn new(ip: IpAddr, port: u16, chunk_size: u64) -> Self{
+        let shutdown = Arc::new(Notify::new());
         Self {
             is_server_running: false,
             ip,
             port,
-            stop_signal,
+            chunk_size,
+            stop_signal: shutdown,
+            file_list: List::new()
         }
     }
 
     /// Starts server by listening for incomming connections
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
-            println!("Server running on {}", self.ip);
+        println!("Server running on {}", self.ip);
 
-            loop {
-                tokio::select! {
-                    // Wait for an incoming connection
-                    result = listener.accept() => {
-                        match result {
-                            Ok((socket, addr)) => {
-                                println!("New connection from: {}", addr);
-                                let stop_signal_clone = Arc::clone(&self.stop_signal);
-                                tokio::spawn(async move {
-                                    if let Err(e) = Self::handle_request(socket, stop_signal_clone).await {
-                                        eprintln!("Error handling connection: {:?}", e);
-                                    }
-                                });
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to accept connection: {:?}", e);
-                            }
+        loop {
+            tokio::select! {
+                // Wait for an incoming connection
+                result = listener.accept() => {
+                    match result {
+                        Ok((socket, addr)) => {
+                            println!("New connection from: {}", addr);
+                            let stop_signal_clone = Arc::clone(&self.stop_signal);
+                             let self_clone = self.clone();
+                            tokio::spawn(async {
+                                if let Err(e) = self_clone.handle_request(socket, stop_signal_clone).await {
+                                    eprintln!("Error handling connection: {:?}", e);
+                                }
+                            });
                         }
-                    },
+                        Err(e) => {
+                            eprintln!("Failed to accept connection: {:?}", e);
+                        }
+                    }
+                },
 
-                    // Wait for the stop signal
-                    _ = self.stop_signal.notified() => {
-                        println!("Stopping server...");
-                        break;
-                    },
-                }
+                // Wait for the stop signal
+                _ = self.stop_signal.notified() => {
+                    println!("Stopping server...");
+                    break;
+                },
             }
-            println!("loop broken");
-            Ok(())
+        }
+        println!("loop broken");
+        Ok(())
     }
 
     /// handles connections and reads the data transmited through the socket
     async fn handle_request(
+        self,
         mut socket: TcpStream,
         shutdown_signal: Arc<Notify>
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -93,7 +110,7 @@ impl Server{
                             };
 
                             // Handle the request and generate a response
-                            let response = Self::match_request(&request).await;
+                            let response = self.match_request(&request).await;
 
                             // Serialize response
                             let response = bincode::serialize(&response)?;
@@ -114,25 +131,42 @@ impl Server{
     }
 
     /// handle the request depeding on what the request is asking for
-    async fn match_request(request: &Request) -> Response {
+    async fn match_request(&self, request: &Request) -> Response {
         match request {
+            // get a list of available files/dir
             Request::List => {
                 // Call your get_list function here, for example:
-                Response::DirectoryListing(Self::get_list().await)
+                Response::DirectoryListing(self.get_list().await)
             },
+            // client requests to GET certain files and server sends them
             Request::Get(path) => {
-                println!("Handling Get request for: {}", path);
-                let response = format!("Content of {}", path);
-                Response::Ok(response)
+                self.handle_get_fs_object(path).await
+            },
+            // handles files/dir sent by client
+            Request::Upload(metadata) => {
+                Self::recieve_fs_object(metadata).await
             }
         }
     }
     // TODO allow to store a list of the files in the disk
 
-    pub async fn get_list() -> HashMap<String, Vec<u8>>{
-        let file = FileMetadata::File { path: "/example".to_owned(), size: 23 };
-        HashMap::from([
-            ("elden ring".to_owned(), file.to_bytes())
-        ])
+    async fn get_list(&self) -> HashMap<String, Vec<u8>>{
+        todo!()
     }
+
+    async fn handle_get_fs_object(&self, path: &str) -> Response{
+        let metadata = self.file_list.file_list.get(path).expect("Not found");
+        match metadata {
+            FileSystemObjectMetadata::File { path, size_bytes } => file_transfer::FileTransferProtocol::new(path, self.chunk_size),
+            FileSystemObjectMetadata::Directory { path } => todo!(),
+        };
+        Response::Ok
+    }
+
+    async fn recieve_fs_object(metadata: &FileSystemObjectMetadata) -> Response{
+        todo!()
+    }
+
+    // let  = HashMap::from(value);
 }
+

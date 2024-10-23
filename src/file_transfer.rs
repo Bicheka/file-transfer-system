@@ -23,13 +23,13 @@ impl From<IoError> for TransferError {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum FileMetadata {
-    File { path: String, size: u64 },
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum FileSystemObjectMetadata {
+    File { path: String, size_bytes: u64 },
     Directory { path: String },
 }
 
-impl FileMetadata {
+impl FileSystemObjectMetadata {
     // Serialize to bytes for sending over the network
     pub fn to_bytes(&self) -> Vec<u8> {
         bincode::serialize(self).unwrap()  // Using `bincode` for serialization
@@ -60,26 +60,24 @@ impl Connection {
 
 // Define the file transfer protocol
 pub struct FileTransferProtocol {
-    pub filename: String,
-    pub file_size: u64,
+
+    pub path: String,
     pub chunk_size: u64,
     pub checksum: Option<String>,  // Optional checksum for integrity
 }
 
 impl FileTransferProtocol {
     // Initialize the file transfer protocol
-    pub fn new(filename: String, file_size: u64, chunk_size: u64) -> Self {
+    pub fn new(path: &str, chunk_size: u64) -> Self {
         FileTransferProtocol {
-            filename,
-            file_size,
+            path: path.to_owned(),
             chunk_size,
-            checksum: None,
+            checksum: None
         }
     }
-
     // Send file logic over TCP
     pub async fn send_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
-        let path = Path::new(&self.filename);
+        let path = Path::new(&self.path);
         let mut file = File::open(path).await.map_err(|_| TransferError::FileNotFound)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
@@ -96,15 +94,16 @@ impl FileTransferProtocol {
             connection.write(&buffer[..n]).await?;
             total_bytes_sent += n as u64;
 
-            // Optional: You can implement progress reporting
-            println!("Sent {} bytes of {} total.", total_bytes_sent, self.file_size);
+            // TODO implement progress reporting
+            println!("Received {} bytes", total_bytes_sent);
         }
 
         Ok(())
     }
+
     // Receive file logic over TCP
     pub async fn receive_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
-        let path = Path::new(&self.filename);
+        let path = Path::new(&self.path);
         let mut file = File::create(path).await.map_err(TransferError::from)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
@@ -122,7 +121,7 @@ impl FileTransferProtocol {
             total_bytes_received += n as u64;
 
             // Optional: You can implement progress reporting
-            println!("Received {} bytes of {} total.", total_bytes_received, self.file_size);
+            println!("Received {} bytes", total_bytes_received);
         }
 
         Ok(())
@@ -138,7 +137,7 @@ impl FileTransferProtocol {
 
                 if metadata.is_dir() {
                     // Send directory metadata
-                    let dir_metadata = FileMetadata::Directory {
+                    let dir_metadata = FileSystemObjectMetadata::Directory {
                         path: entry_path.to_string_lossy().into(),
                     };
                     connection.write(&dir_metadata.to_bytes()).await?;
@@ -147,22 +146,20 @@ impl FileTransferProtocol {
                     self.send_directory(connection, &entry_path).await?;
                 } else if metadata.is_file() {
                     // Send file metadata
-                    let file_metadata = FileMetadata::File {
+                    let file_metadata = FileSystemObjectMetadata::File {
                         path: entry_path.to_string_lossy().into(),
-                        size: metadata.len(),
+                        size_bytes: metadata.len(),
                     };
                     connection.write(&file_metadata.to_bytes()).await?;
 
                     // Send the file content
                     let file_transfer = FileTransferProtocol::new(
-                        entry_path.to_string_lossy().into(),
-                        metadata.len(),
+                        entry_path.to_str().expect("could not parse entry path into str"),
                         self.chunk_size,
                     );
                     file_transfer.send_file(connection).await?;
                 }
             }
-
             Ok(())
         })
     }
@@ -176,17 +173,17 @@ impl FileTransferProtocol {
                 break;  // End of transfer
             }
             
-            let metadata = FileMetadata::from_bytes(&metadata_buffer[..n]);
+            let metadata = FileSystemObjectMetadata::from_bytes(&metadata_buffer[..n]);
 
             match metadata {
-                FileMetadata::Directory { path } => {
+                FileSystemObjectMetadata::Directory { path } => {
                     // Create directory
                     let dir_path = Path::new(&path);
                     create_dir_all(dir_path).await.map_err(TransferError::from)?;
                 }
-                FileMetadata::File { path, size } => {
+                FileSystemObjectMetadata::File { path, size_bytes } => {
                     // Receive the file
-                    let file_transfer = FileTransferProtocol::new(path.clone(), size, self.chunk_size);
+                    let file_transfer = FileTransferProtocol::new(path.clone().as_str(), self.chunk_size);
                     file_transfer.receive_file(connection).await?;
                 }
             }
