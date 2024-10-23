@@ -10,11 +10,6 @@ pub struct List{
     // filename: data
     pub file_list: HashMap<String, FileSystemObjectMetadata>
 }
-impl List{
-    fn new() -> Self{
-        List{file_list: HashMap::new()}
-    }
-}
 
 #[derive(Clone)]
 pub struct Server{
@@ -23,7 +18,7 @@ pub struct Server{
     pub port: u16,
     pub chunk_size: u64,
     stop_signal: Arc<Notify>, // Add a stop signal
-    file_list: List
+    file_list: HashMap<String, FileSystemObjectMetadata>
 }
 impl Server{
     /// Creates new instance of server
@@ -35,7 +30,7 @@ impl Server{
             port,
             chunk_size,
             stop_signal: shutdown,
-            file_list: List::new()
+            file_list: HashMap::new()
         }
     }
 
@@ -155,7 +150,7 @@ impl Server{
     }
 
     async fn handle_get_fs_object(&self, path: &str) -> Response{
-        let metadata = self.file_list.file_list.get(path).expect("Not found");
+        let metadata = self.file_list.get(path).expect("Not found");
         match metadata {
             FileSystemObjectMetadata::File { path, size_bytes } => file_transfer::FileTransferProtocol::new(path, self.chunk_size),
             FileSystemObjectMetadata::Directory { path } => todo!(),
