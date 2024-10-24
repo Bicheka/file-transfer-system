@@ -24,12 +24,12 @@ impl From<IoError> for TransferError {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum FileSystemObjectMetadata {
+pub enum FSObjectMetadata {
     File { path: String, size_bytes: u64 },
     Directory { path: String },
 }
 
-impl FileSystemObjectMetadata {
+impl FSObjectMetadata {
     // Serialize to bytes for sending over the network
     pub fn to_bytes(&self) -> Vec<u8> {
         bincode::serialize(self).unwrap()  // Using `bincode` for serialization
@@ -137,7 +137,7 @@ impl FileTransferProtocol {
 
                 if metadata.is_dir() {
                     // Send directory metadata
-                    let dir_metadata = FileSystemObjectMetadata::Directory {
+                    let dir_metadata = FSObjectMetadata::Directory {
                         path: entry_path.to_string_lossy().into(),
                     };
                     connection.write(&dir_metadata.to_bytes()).await?;
@@ -146,7 +146,7 @@ impl FileTransferProtocol {
                     self.send_directory(connection, &entry_path).await?;
                 } else if metadata.is_file() {
                     // Send file metadata
-                    let file_metadata = FileSystemObjectMetadata::File {
+                    let file_metadata = FSObjectMetadata::File {
                         path: entry_path.to_string_lossy().into(),
                         size_bytes: metadata.len(),
                     };
@@ -173,15 +173,15 @@ impl FileTransferProtocol {
                 break;  // End of transfer
             }
             
-            let metadata = FileSystemObjectMetadata::from_bytes(&metadata_buffer[..n]);
+            let metadata = FSObjectMetadata::from_bytes(&metadata_buffer[..n]);
 
             match metadata {
-                FileSystemObjectMetadata::Directory { path } => {
+                FSObjectMetadata::Directory { path } => {
                     // Create directory
                     let dir_path = Path::new(&path);
                     create_dir_all(dir_path).await.map_err(TransferError::from)?;
                 }
-                FileSystemObjectMetadata::File { path, size_bytes } => {
+                FSObjectMetadata::File { path, size_bytes } => {
                     // Receive the file
                     let file_transfer = FileTransferProtocol::new(path.clone().as_str(), self.chunk_size);
                     file_transfer.receive_file(connection).await?;
