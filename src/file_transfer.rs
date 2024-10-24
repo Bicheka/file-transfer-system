@@ -167,7 +167,7 @@ impl FileTransferProtocol {
     pub async fn receive_directory(&self, connection: &mut Connection) -> Result<(), TransferError> {
         loop {
             // Receive metadata (directory or file)
-            let mut metadata_buffer = vec![0u8; 1024];  // Adjust buffer size as needed
+            let mut metadata_buffer = vec![0u8; 1024];
             let n = connection.read(&mut metadata_buffer).await?;
             if n == 0 {
                 break;  // End of transfer
