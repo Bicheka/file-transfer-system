@@ -1,17 +1,16 @@
 //! networking logic
-use std::{collections::HashMap, net::IpAddr, str::FromStr};
+use std::{collections::HashMap, net::IpAddr, path::Path, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
 
-use crate::file_transfer::FileSystemObjectMetadata;
+use crate::file_transfer::FSObjectMetadata;
 
 
 #[derive(Serialize, Deserialize)]
 pub enum Request {
-    List, // list of file names/paths
-    Get(String), // get("filename/path")
-    Upload(FileSystemObjectMetadata)
+    Get(Box<Path>),
+    Upload(FSObjectMetadata)
 }
 
 #[derive(Serialize, Deserialize)]

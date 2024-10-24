@@ -1,41 +1,27 @@
 //! Contains logic for listening for incomming connections
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Notify};
-use std::{collections::HashMap, net::{IpAddr, SocketAddr}};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{Mutex, Notify}};
+use std::net::{IpAddr, SocketAddr};
 use bincode;
-use crate::{file_transfer::{self, FileSystemObjectMetadata}, network::{Request, Response}};
+use crate::network::{Request, Response};
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct List{
-    // filename: data
-    pub file_list: HashMap<String, FileSystemObjectMetadata>
-}
-impl List{
-    fn new() -> Self{
-        List{file_list: HashMap::new()}
-    }
-}
-
-#[derive(Clone)]
 pub struct Server{
-    pub is_server_running: bool,
+    pub is_server_running: Arc<Mutex<bool>>,
     pub ip: IpAddr,
     pub port: u16,
-    pub chunk_size: u64,
-    stop_signal: Arc<Notify>, // Add a stop signal
-    file_list: List
+    stop_signal: Arc<Notify>,
 }
 impl Server{
     /// Creates new instance of server
-    pub fn new(ip: IpAddr, port: u16, chunk_size: u64) -> Self{
-        let shutdown = Arc::new(Notify::new());
+    pub fn new(ip: IpAddr, port: u16) -> Self{
+        let stop_signal = Arc::new(Notify::new());
+        let is_server_running = Arc::new(Mutex::new(false));
         Self {
-            is_server_running: false,
+            is_server_running,
             ip,
             port,
-            chunk_size,
-            stop_signal: shutdown,
-            file_list: List::new()
+            stop_signal,
         }
     }
 
@@ -52,7 +38,8 @@ impl Server{
                         Ok((socket, addr)) => {
                             println!("New connection from: {}", addr);
                             let stop_signal_clone = Arc::clone(&self.stop_signal);
-                             let self_clone = self.clone();
+                            let self_clone = self.clone();
+                            // handle connection in another thread
                             tokio::spawn(async {
                                 if let Err(e) = self_clone.handle_request(socket, stop_signal_clone).await {
                                     eprintln!("Error handling connection: {:?}", e);
@@ -133,40 +120,15 @@ impl Server{
     /// handle the request depeding on what the request is asking for
     async fn match_request(&self, request: &Request) -> Response {
         match request {
-            // get a list of available files/dir
-            Request::List => {
-                // Call your get_list function here, for example:
-                Response::DirectoryListing(self.get_list().await)
-            },
             // client requests to GET certain files and server sends them
             Request::Get(path) => {
-                self.handle_get_fs_object(path).await
+                todo!()
             },
             // handles files/dir sent by client
             Request::Upload(metadata) => {
-                Self::recieve_fs_object(metadata).await
+                todo!()
             }
         }
     }
-    // TODO allow to store a list of the files in the disk
-
-    async fn get_list(&self) -> HashMap<String, Vec<u8>>{
-        todo!()
-    }
-
-    async fn handle_get_fs_object(&self, path: &str) -> Response{
-        let metadata = self.file_list.file_list.get(path).expect("Not found");
-        match metadata {
-            FileSystemObjectMetadata::File { path, size_bytes } => file_transfer::FileTransferProtocol::new(path, self.chunk_size),
-            FileSystemObjectMetadata::Directory { path } => todo!(),
-        };
-        Response::Ok
-    }
-
-    async fn recieve_fs_object(metadata: &FileSystemObjectMetadata) -> Response{
-        todo!()
-    }
-
-    // let  = HashMap::from(value);
 }
 
