@@ -1,5 +1,5 @@
 //! networking logic
-use std::{collections::HashMap, fs::Metadata, net::IpAddr, path::Path, str::FromStr};
+use std::{collections::HashMap, net::IpAddr, path::Path, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
