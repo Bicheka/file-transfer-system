@@ -1,7 +1,7 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::fs::{self, create_dir_all, File};
 use tokio::net::TcpStream;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::Error as IoError;
 use serde::{Serialize, Deserialize};
 use futures::future::BoxFuture;
@@ -24,9 +24,16 @@ impl From<IoError> for TransferError {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum FSObjectMetadata {
-    File { path: String, size_bytes: u64 },
-    Directory { path: String },
+pub struct FSObjectMetadata {
+    pub file_size: Option<u64>,
+    pub file_name: String,
+    pub path_type: PathType
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum PathType {
+    File,
+    Directory
 }
 
 impl FSObjectMetadata {
@@ -60,25 +67,22 @@ impl Connection {
 
 // Define the file transfer protocol
 pub struct FileTransferProtocol {
-
-    pub path: String,
+    pub path: PathBuf,
     pub chunk_size: u64,
-    pub checksum: Option<String>,  // Optional checksum for integrity
 }
 
 impl FileTransferProtocol {
     // Initialize the file transfer protocol
-    pub fn new(path: &str, chunk_size: u64) -> Self {
+    pub fn new(path: &Path, chunk_size: u64) -> Self {
         FileTransferProtocol {
             path: path.to_owned(),
             chunk_size,
-            checksum: None
         }
     }
+
     // Send file logic over TCP
     pub async fn send_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
-        let path = Path::new(&self.path);
-        let mut file = File::open(path).await.map_err(|_| TransferError::FileNotFound)?;
+        let mut file = File::open(&self.path).await.map_err(|_| TransferError::FileNotFound)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
         let mut total_bytes_sent = 0;
@@ -95,7 +99,7 @@ impl FileTransferProtocol {
             total_bytes_sent += n as u64;
 
             // TODO implement progress reporting
-            println!("Received {} bytes", total_bytes_sent);
+            println!("Sent {} bytes", total_bytes_sent);
         }
 
         Ok(())
@@ -103,8 +107,7 @@ impl FileTransferProtocol {
 
     // Receive file logic over TCP
     pub async fn receive_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
-        let path = Path::new(&self.path);
-        let mut file = File::create(path).await.map_err(TransferError::from)?;
+        let mut file = File::create(&self.path).await.map_err(TransferError::from)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
         let mut total_bytes_received = 0;
@@ -127,7 +130,7 @@ impl FileTransferProtocol {
         Ok(())
     }
 
-    pub fn send_directory<'a>(&'a self, connection: &'a mut Connection, dir_path: &'a Path,) -> BoxFuture<'a, Result<(), TransferError>> {
+    pub fn send_directory<'a>(&'a self, connection: &'a mut Connection, dir_path: &'a Path) -> BoxFuture<'a, Result<(), TransferError>> {
         Box::pin(async move {
             let mut dir_entries = fs::read_dir(dir_path).await.map_err(|_| TransferError::FileNotFound)?;
 
@@ -137,8 +140,10 @@ impl FileTransferProtocol {
 
                 if metadata.is_dir() {
                     // Send directory metadata
-                    let dir_metadata = FSObjectMetadata::Directory {
-                        path: entry_path.to_string_lossy().into(),
+                    let dir_metadata = FSObjectMetadata {
+                        file_size: None,
+                        file_name: entry_path.file_name().unwrap().to_string_lossy().to_string(),
+                        path_type: PathType::Directory,
                     };
                     connection.write(&dir_metadata.to_bytes()).await?;
 
@@ -146,17 +151,15 @@ impl FileTransferProtocol {
                     self.send_directory(connection, &entry_path).await?;
                 } else if metadata.is_file() {
                     // Send file metadata
-                    let file_metadata = FSObjectMetadata::File {
-                        path: entry_path.to_string_lossy().into(),
-                        size_bytes: metadata.len(),
+                    let file_metadata = FSObjectMetadata {
+                        file_size: Some(metadata.len()),
+                        file_name: entry_path.file_name().unwrap().to_string_lossy().to_string(),
+                        path_type: PathType::File,
                     };
                     connection.write(&file_metadata.to_bytes()).await?;
 
                     // Send the file content
-                    let file_transfer = FileTransferProtocol::new(
-                        entry_path.to_str().expect("could not parse entry path into str"),
-                        self.chunk_size,
-                    );
+                    let file_transfer = FileTransferProtocol::new(&entry_path, self.chunk_size);
                     file_transfer.send_file(connection).await?;
                 }
             }
@@ -172,18 +175,19 @@ impl FileTransferProtocol {
             if n == 0 {
                 break;  // End of transfer
             }
-            
+
             let metadata = FSObjectMetadata::from_bytes(&metadata_buffer[..n]);
 
-            match metadata {
-                FSObjectMetadata::Directory { path } => {
+            match metadata.path_type {
+                PathType::Directory => {
                     // Create directory
-                    let dir_path = Path::new(&path);
-                    create_dir_all(dir_path).await.map_err(TransferError::from)?;
+                    let dir_path = self.path.join(&metadata.file_name);
+                    create_dir_all(&dir_path).await.map_err(TransferError::from)?;
                 }
-                FSObjectMetadata::File { path, size_bytes } => {
+                PathType::File => {
                     // Receive the file
-                    let file_transfer = FileTransferProtocol::new(path.clone().as_str(), self.chunk_size);
+                    let file_path = self.path.join(&metadata.file_name);
+                    let file_transfer = FileTransferProtocol::new(&file_path, self.chunk_size);
                     file_transfer.receive_file(connection).await?;
                 }
             }
