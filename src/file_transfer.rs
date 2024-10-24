@@ -145,22 +145,14 @@ impl FileTransferProtocol {
 
                 if metadata.is_dir() {
                     // Send directory metadata
-                    let dir_metadata = FSObjectMetadata {
-                        file_size: None,
-                        file_name: entry_path.file_name().unwrap().to_string_lossy().to_string(),
-                        path_type: PathType::Directory,
-                    };
+                    let dir_metadata = FSObjectMetadata::new(None, entry_path.file_name().unwrap().to_string_lossy().to_string(), PathType::Directory);
                     connection.write(&dir_metadata.to_bytes()).await?;
 
                     // Recursively send the directory's contents
                     self.send_directory(connection, &entry_path).await?;
                 } else if metadata.is_file() {
                     // Send file metadata
-                    let file_metadata = FSObjectMetadata {
-                        file_size: Some(metadata.len()),
-                        file_name: entry_path.file_name().unwrap().to_string_lossy().to_string(),
-                        path_type: PathType::File,
-                    };
+                    let file_metadata = FSObjectMetadata::new(Some(metadata.len()), entry_path.file_name().unwrap().to_string_lossy().to_string(), PathType::File);
                     connection.write(&file_metadata.to_bytes()).await?;
 
                     // Send the file content
