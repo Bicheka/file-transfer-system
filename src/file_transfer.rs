@@ -37,6 +37,11 @@ pub enum PathType {
 }
 
 impl FSObjectMetadata {
+
+    fn new(file_size: Option<u64>, file_name: String, path_type: PathType) -> Self {
+        Self {file_size, file_name, path_type}
+    }
+
     // Serialize to bytes for sending over the network
     pub fn to_bytes(&self) -> Vec<u8> {
         bincode::serialize(self).unwrap()  // Using `bincode` for serialization
