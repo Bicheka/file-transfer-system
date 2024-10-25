@@ -1,13 +1,15 @@
 //! networking logic
-use std::{collections::HashMap, net::IpAddr, path::Path, str::FromStr};
+use std::{net::IpAddr, path::Path, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
 
+use crate::file_transfer::PathType;
+
 #[derive(Serialize, Deserialize)]
 pub enum Request {
     Get(Box<Path>),
-    Upload
+    Upload(PathType)
 }
 pub enum IpType{
     IPv4,

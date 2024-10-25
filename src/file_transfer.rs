@@ -100,8 +100,12 @@ impl FileTransferProtocol {
         }
         Ok(())
     }
-    pub async fn init_receive(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        todo!()
+    pub async fn init_receive(&self, connection: &mut Connection<'_>, path_type: &PathType) -> Result<(), TransferError> {
+        match path_type {
+            PathType::File => self.receive_file(connection).await?,
+            PathType::Directory => self.receive_directory(connection).await?
+        }
+        Ok(())
     }
     // Send file logic over TCP
     pub async fn send_file(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
