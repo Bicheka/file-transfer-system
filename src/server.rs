@@ -2,7 +2,7 @@
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{Mutex, Notify}};
 use std::net::{IpAddr, SocketAddr};
 use bincode;
-use crate::network::{Request, Response};
+use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -95,9 +95,8 @@ impl Server{
                                     continue;
                                 }
                             };
-
                             // Handle the request and generate a response
-                            let response = self.match_request(&request).await;
+                            let response = self.match_request(&request, &mut socket).await;
 
                             // Serialize response
                             let response = bincode::serialize(&response)?;
@@ -118,17 +117,20 @@ impl Server{
     }
 
     /// handle the request depeding on what the request is asking for
-    async fn match_request(&self, request: &Request) -> Response {
+    async fn match_request(&self, request: &Request, stream: &mut TcpStream) -> Result<(), TransferError> {
         match request {
             // client requests to GET certain files and server sends them
             Request::Get(path) => {
-                todo!()
+                FileTransferProtocol::new(path, 64 * 1024).init_send(&mut Connection{stream}).await?;
             },
             // handles files/dir sent by client
-            Request::Upload(metadata) => {
+            Request::Upload => {
+                // FileTransferProtocol::new().init(&mut Connection{stream});
+                // Response::Ok
                 todo!()
             }
         }
+        Ok(())
     }
 }
 

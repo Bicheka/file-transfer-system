@@ -7,9 +7,9 @@ use serde::{Serialize, Deserialize};
 use futures::future::BoxFuture;
 
 /// Error type for transfer errors
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum TransferError {
-    IoError(IoError),
+    IoError(String), // Store the error message as a String
     ConnectionClosed,
     FileNotFound,
     FileCorrupted,
@@ -19,7 +19,7 @@ pub enum TransferError {
 
 impl From<IoError> for TransferError {
     fn from(err: IoError) -> TransferError {
-        TransferError::IoError(err)
+        TransferError::IoError(err.to_string()) // Convert IoError to String
     }
 }
 
@@ -54,19 +54,26 @@ impl FSObjectMetadata {
 }
 
 // Simplified Connection struct using only TcpStream
-pub struct Connection {
-    pub stream: TcpStream,
+pub struct Connection<'a> {
+    pub stream: &'a mut TcpStream,
 }
 
-impl Connection {
+
+impl<'a> Connection<'a> {
     // Example of writing to the TCP connection
     pub async fn write(&mut self, data: &[u8]) -> Result<(), TransferError> {
-        self.stream.write_all(data).await.map_err(TransferError::IoError)
+        self.stream
+            .write_all(data)
+            .await
+            .map_err(|e| TransferError::IoError(e.to_string())) // Convert std::io::Error to String
     }
 
     // Example of reading from the TCP connection
     pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, TransferError> {
-        self.stream.read(buffer).await.map_err(TransferError::IoError)
+        self.stream
+            .read(buffer)
+            .await
+            .map_err(|e| TransferError::IoError(e.to_string())) // Convert std::io::Error to String
     }
 }
 
@@ -85,8 +92,19 @@ impl FileTransferProtocol {
         }
     }
 
+    pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        if self.path.is_dir() {
+            self.send_directory(connection).await?;
+        } else {
+            self.send_file(connection).await?;
+        }
+        Ok(())
+    }
+    pub async fn init_receive(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        todo!()
+    }
     // Send file logic over TCP
-    pub async fn send_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
+    pub async fn send_file(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = File::open(&self.path).await.map_err(|_| TransferError::FileNotFound)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
@@ -111,7 +129,7 @@ impl FileTransferProtocol {
     }
 
     // Receive file logic over TCP
-    pub async fn receive_file(&self, connection: &mut Connection) -> Result<(), TransferError> {
+    pub async fn receive_file(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = File::create(&self.path).await.map_err(TransferError::from)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
@@ -135,9 +153,9 @@ impl FileTransferProtocol {
         Ok(())
     }
 
-    pub fn send_directory<'a>(&'a self, connection: &'a mut Connection, dir_path: &'a Path) -> BoxFuture<'a, Result<(), TransferError>> {
+    pub fn send_directory<'a>(&'a self, connection: &'a mut Connection) -> BoxFuture<'a, Result<(), TransferError>> {
         Box::pin(async move {
-            let mut dir_entries = fs::read_dir(dir_path).await.map_err(|_| TransferError::FileNotFound)?;
+            let mut dir_entries = fs::read_dir(&self.path).await.map_err(|_| TransferError::FileNotFound)?;
 
             while let Some(entry) = dir_entries.next_entry().await.map_err(TransferError::from)? {
                 let entry_path = entry.path();
@@ -149,7 +167,7 @@ impl FileTransferProtocol {
                     connection.write(&dir_metadata.to_bytes()).await?;
 
                     // Recursively send the directory's contents
-                    self.send_directory(connection, &entry_path).await?;
+                    self.send_directory(connection).await?;
                 } else if metadata.is_file() {
                     // Send file metadata
                     let file_metadata = FSObjectMetadata::new(Some(metadata.len()), entry_path.file_name().unwrap().to_string_lossy().to_string(), PathType::File);
@@ -164,7 +182,7 @@ impl FileTransferProtocol {
         })
     }
 
-    pub async fn receive_directory(&self, connection: &mut Connection) -> Result<(), TransferError> {
+    pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         loop {
             // Receive metadata (directory or file)
             let mut metadata_buffer = vec![0u8; 1024];

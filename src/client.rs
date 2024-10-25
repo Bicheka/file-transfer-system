@@ -4,7 +4,7 @@ use std::{error::Error, time::Duration};
 
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time};
 use bincode;
-use crate::network::{Request, Response};
+use crate::network::Request;
 
 pub struct Client {
     server_address: String,
@@ -54,14 +54,14 @@ impl Client {
     // TODO add 
 
     /// Reads a response from the server.
-    pub async fn read_response(&mut self) -> Result<Response, Box<dyn Error>> {
+    pub async fn read_response(&mut self) -> Result<(), Box<dyn Error>> {
         if let Some(ref mut connection) = self.connection {
             let mut buffer = [0; 1024];
             let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
             
             // Apply timeout to the read operation
             let bytes_read = time::timeout(timeout_duration, connection.read(&mut buffer)).await??;
-            let response: Response = bincode::deserialize(&buffer[..bytes_read])?;
+            let response = bincode::deserialize(&buffer[..bytes_read])?;
             Ok(response)
         }
          else {
