@@ -52,8 +52,6 @@ impl Client {
         Ok(())
     }
 
-    // TODO add 
-
     /// Reads a response from the server.
     pub async fn read_response(&mut self) -> Result<(), Box<dyn Error>> {
         if let Some(ref mut connection) = self.connection {

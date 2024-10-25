@@ -1,22 +1,48 @@
-//! Contains logic for listening for incomming connections
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{Mutex, Notify}};
-use std::{net::{IpAddr, SocketAddr}, path::{Path, PathBuf}};
-use bincode;
-use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
-use std::sync::Arc;
+//! Contains logic for listening for incoming connections and handling file transfer requests.
 
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+    sync::{Mutex, Notify},
+};
+use std::{
+    net::{IpAddr, SocketAddr},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use bincode;
+use crate::{
+    file_transfer::{Connection, FileTransferProtocol, TransferError},
+    network::Request,
+};
+
+/// Represents a file server that listens for incoming connections and handles file transfer requests.
 #[derive(Clone)]
-pub struct Server{
+pub struct Server {
+    /// Indicates if the server is currently running.
     pub is_server_running: Arc<Mutex<bool>>,
+    /// The IP address on which the server listens.
     pub ip: IpAddr,
+    /// The port on which the server listens.
     pub port: u16,
+    /// The path to the directory where files are stored.
     pub path: PathBuf,
-    pub buffer_size: u64, 
+    /// Buffer size for file transfer operations.
+    pub buffer_size: u64,
+    /// Notification signal for stopping the server.
     stop_signal: Arc<Notify>,
 }
-impl Server{
-    /// Creates new instance of server
-    pub fn new(ip: IpAddr, port: u16, path: &Path, buffer_size: u64) -> Self{
+
+impl Server {
+    /// Creates a new instance of the `Server`.
+    ///
+    /// # Parameters
+    ///
+    /// - `ip`: IP address on which the server will listen.
+    /// - `port`: Port on which the server will listen.
+    /// - `path`: Directory path for file storage and retrieval.
+    /// - `buffer_size`: Size of the buffer used for file transfers.
+    pub fn new(ip: IpAddr, port: u16, path: &Path, buffer_size: u64) -> Self {
         let stop_signal = Arc::new(Notify::new());
         let is_server_running = Arc::new(Mutex::new(false));
         Self {
@@ -29,7 +55,7 @@ impl Server{
         }
     }
 
-    /// Starts server by listening for incomming connections
+    /// Starts the server, accepting and handling incoming connections.
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
         println!("Server running on {}", self.ip);
@@ -43,7 +69,6 @@ impl Server{
                             println!("New connection from: {}", addr);
                             let stop_signal_clone = Arc::clone(&self.stop_signal);
                             let self_clone = self.clone();
-                            // handle connection in another thread
                             tokio::spawn(async {
                                 if let Err(e) = self_clone.handle_request(socket, stop_signal_clone).await {
                                     eprintln!("Error handling connection: {:?}", e);
@@ -55,43 +80,35 @@ impl Server{
                         }
                     }
                 },
-
-                // Wait for the stop signal
                 _ = self.stop_signal.notified() => {
                     println!("Stopping server...");
                     break;
                 },
             }
         }
-        println!("loop broken");
         Ok(())
     }
 
-    /// handles connections and reads the data transmited through the socket
+    /// Handles an incoming connection by reading and processing client requests.
     async fn handle_request(
         self,
         mut socket: TcpStream,
-        shutdown_signal: Arc<Notify>
+        shutdown_signal: Arc<Notify>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut buffer = [0; 1024];
         loop {
             tokio::select! {
-                // Check if we have received a shutdown signal
                 _ = shutdown_signal.notified() => {
                     println!("Shutdown signal received. Closing connection.");
                     break;
                 }
-
-                // Read data from the socket
                 bytes_read = socket.read(&mut buffer) => {
                     match bytes_read {
                         Ok(0) => {
-                            // Connection was closed
                             println!("Connection closed by client.");
                             break;
                         }
                         Ok(bytes_read) => {
-                            // Convert the buffer to a string (assuming UTF-8 encoded data)
                             let request: Request = match bincode::deserialize(&buffer[..bytes_read]) {
                                 Ok(req) => req,
                                 Err(e) => {
@@ -99,13 +116,9 @@ impl Server{
                                     continue;
                                 }
                             };
-                            // Handle the request and generate a response
                             let response = self.match_request(&request, &mut socket).await;
 
-                            // Serialize response
                             let response = bincode::serialize(&response)?;
-
-                            // Send the response back to the client
                             socket.write_all(&response).await?;
                         }
                         Err(e) => {
@@ -120,15 +133,20 @@ impl Server{
         Ok(())
     }
 
-    /// handle the request depeding on what the request is asking for
+    /// Matches the incoming request to the appropriate action and executes it.
     async fn match_request(&self, request: &Request, stream: &mut TcpStream) -> Result<(), TransferError> {
         match request {
-            // client requests to GET certain files and server sends them
-            Request::Get(path) => { FileTransferProtocol::new(path, 64 * 1024).init_send(&mut Connection{stream}).await?; },
-            // handles files/dir sent by client
-            Request::Upload(path_type) => { FileTransferProtocol::new(&self.path, self.buffer_size).init_receive(&mut Connection{stream}, &path_type).await?; }
+            Request::Get(path) => {
+                FileTransferProtocol::new(path, 64 * 1024)
+                    .init_send(&mut Connection { stream })
+                    .await?;
+            }
+            Request::Upload(path_type) => {
+                FileTransferProtocol::new(&self.path, self.buffer_size)
+                    .init_receive(&mut Connection { stream }, path_type)
+                    .await?;
+            }
         }
         Ok(())
     }
 }
-
