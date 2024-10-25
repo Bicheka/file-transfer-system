@@ -1,10 +1,10 @@
 //! Contains the logic for the client, sending requests to a server
 
-use std::{error::Error, time::Duration};
+use std::{error::Error, path::Path, time::Duration};
 
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time};
 use bincode;
-use crate::network::Request;
+use crate::{file_transfer::PathType, network::Request};
 
 pub struct Client {
     server_address: String,
@@ -38,9 +38,10 @@ impl Client {
     }
 
     /// Sends a request to the server.
-    pub async fn send_request(&mut self, request: &Request) -> Result<(), Box<dyn Error>> {
+    pub async fn send_request(&mut self, path: &Path) -> Result<(), Box<dyn Error>> {
+        let path_type = match path.is_dir() {true => PathType::Directory, false => PathType::File};
         if let Some(ref mut connection) = self.connection {
-            let request_bytes = bincode::serialize(request)?;
+            let request_bytes = bincode::serialize(&Request::Upload(path_type))?;
             let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
             
             // Apply timeout to the write operation
