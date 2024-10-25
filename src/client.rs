@@ -1,5 +1,3 @@
-//! Contains the logic for the client, sending requests to a server
-
 use std::{error::Error, path::Path, time::Duration};
 
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time};

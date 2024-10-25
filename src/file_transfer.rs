@@ -1,5 +1,3 @@
-//! File transfer library for handling file and directory transfer over a TCP connection.
-
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::fs::{self, create_dir_all, File};
 use tokio::net::TcpStream;

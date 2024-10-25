@@ -1,5 +1,3 @@
-//! Contains logic for listening for incoming connections and handling file transfer requests.
-
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},

@@ -1,5 +1,3 @@
-//! Peer-to-peer connectivity logic, including NAT traversal via UPnP.
-
 use upnp::upnp;
 
 /// Attempts to traverse NAT using available methods.

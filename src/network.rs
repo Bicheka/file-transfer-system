@@ -1,5 +1,3 @@
-//! Networking logic for IP address handling and request definitions.
-
 use std::{net::IpAddr, path::Path, str::FromStr};
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
