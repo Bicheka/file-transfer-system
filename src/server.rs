@@ -28,7 +28,7 @@ pub struct Server {
     /// Buffer size for file transfer operations.
     pub buffer_size: u64,
     /// Notification signal for stopping the server.
-    stop_signal: Arc<Notify>,
+    pub stop_signal: Arc<Notify>,
 }
 
 impl Server {
@@ -85,6 +85,10 @@ impl Server {
             }
         }
         Ok(())
+    }
+
+    pub async fn stop_server(&self){
+        self.stop_signal.notify_one();
     }
 
     /// Handles an incoming connection by reading and processing client requests.
