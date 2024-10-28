@@ -1,4 +1,4 @@
-use std::{error::Error, path::Path, time::Duration};
+use std::{path::Path, time::Duration};
 
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time};
 use bincode;
@@ -25,7 +25,7 @@ impl Client {
     }
 
     /// Connects to the server.
-    pub async fn connect(&mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
         let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
         let connect_future = TcpStream::connect(&self.server_address);
 
@@ -36,7 +36,7 @@ impl Client {
     }
 
     /// Sends a request to the server.
-    pub async fn send_request(&mut self, path: &Path) -> Result<(), Box<dyn Error>> {
+    pub async fn send_request(&mut self, path: &Path) -> Result<(), anyhow::Error> {
         let path_type = match path.is_dir() {true => PathType::Directory, false => PathType::File};
         if let Some(ref mut connection) = self.connection {
             let request_bytes = bincode::serialize(&Request::Upload(path_type))?;
@@ -45,13 +45,13 @@ impl Client {
             // Apply timeout to the write operation
             time::timeout(timeout_duration, connection.write_all(&request_bytes)).await??;
         } else {
-            return Err("No active connection".into());
-        }
+            return Err(anyhow::Error::msg("No active connection"))
+        };
         Ok(())
     }
 
     /// Reads a response from the server.
-    pub async fn read_response(&mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn read_response(&mut self) -> Result<(), anyhow::Error> {
         if let Some(ref mut connection) = self.connection {
             let mut buffer = [0; 1024];
             let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
@@ -62,12 +62,12 @@ impl Client {
             Ok(response)
         }
          else {
-            Err("No active connection".into())
+            Err(anyhow::Error::msg("No active connection"))
         }
     }
 
     /// Closes the connection to the server.
-    pub async fn close(&mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn close(&mut self) -> Result<(), anyhow::Error> {
         if let Some(mut connection) = self.connection.take() {
             connection.shutdown().await?;
         }
