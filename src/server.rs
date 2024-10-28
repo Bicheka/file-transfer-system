@@ -40,8 +40,7 @@ impl Server {
     /// - `port`: Port on which the server will listen.
     /// - `path`: Directory path for file storage and retrieval.
     /// - `buffer_size`: Size of the buffer used for file transfers.
-    pub fn new(ip: IpAddr, port: u16, path: &Path, buffer_size: u64) -> Self {
-        let stop_signal = Arc::new(Notify::new());
+    pub fn new(ip: IpAddr, port: u16, path: &Path, buffer_size: u64, stop_signal: Arc<Notify>) -> Self {
         let is_server_running = Arc::new(Mutex::new(false));
         Self {
             is_server_running,
@@ -87,8 +86,8 @@ impl Server {
         Ok(())
     }
 
-    pub async fn stop_server(&self){
-        self.stop_signal.notify_one();
+    pub async fn stop_server(&self) {
+        self.stop_signal.notify_waiters();
     }
 
     /// Handles an incoming connection by reading and processing client requests.
