@@ -1,19 +1,21 @@
-use std::{ sync::Arc, time::Duration};
+use std::{ path::Path, sync::Arc, time::Duration};
 
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, sync::Mutex, time};
+use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
-use crate::network::Request;
+use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 
 pub struct Client {
+    client_storage_path: String,
     server_address: String,
     timeout: Option<Duration>,
     connection: Arc<Mutex<Option<TcpStream>>>,  
 }
 
 impl Client {
-    pub fn new(server_address: &str) -> Self {
+    pub fn new(client_storage_path: &str, server_address: &str) -> Self {
         Self {
-            server_address: server_address.to_string(),
+            client_storage_path: client_storage_path.to_owned(),
+            server_address: server_address.to_owned(),
             timeout: None,
             connection: Arc::new(Mutex::new(None))
         }
@@ -51,21 +53,14 @@ impl Client {
         Ok(())
     }
 
-    /// Reads a response from the server.
-    pub async fn read_response(&mut self) -> Result<(), anyhow::Error> {
+    /// Uses File Transfer Protocol to init a send to server through an already stablished connection
+    pub async fn send(&self, path_to_send: &str) -> Result<(), TransferError> {
         let mut connection = self.connection.lock().await;
-        if let Some(ref mut connection) = *connection {
-            let mut buffer = [0; 1024];
-            let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
-            
-            // Apply timeout to the read operation
-            let bytes_read = time::timeout(timeout_duration, connection.read(&mut buffer)).await??;
-            let response = bincode::deserialize(&buffer[..bytes_read])?;
-            Ok(response)
-        }
-         else {
-            Err(anyhow::Error::msg("No active connection"))
-        }
+        let connection = connection.as_mut().expect("Connection is not stablished");
+        FileTransferProtocol::new(&Path::new(path_to_send), 64 * 1024)
+            .init_send(&mut Connection { stream: connection })
+            .await?;
+        Ok(())
     }
 
     /// Closes the connection to the server.
