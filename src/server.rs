@@ -142,7 +142,7 @@ impl Server {
                     .init_send(&mut Connection { stream })
                     .await?;
             }
-            Request::Upload() => {
+            Request::Upload => {
                 FileTransferProtocol::new(&self.path, self.buffer_size)
                     .init_receive(&mut Connection { stream })
                     .await?;
