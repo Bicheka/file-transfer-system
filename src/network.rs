@@ -1,7 +1,6 @@
 use std::{net::IpAddr, path::Path, str::FromStr};
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
-use crate::file_transfer::PathType;
 
 /// Enum representing various types of requests that can be made in the system.
 #[derive(Serialize, Deserialize)]
@@ -9,7 +8,7 @@ pub enum Request {
     /// Request to retrieve a file or directory located at a given path.
     Get(Box<Path>),
     /// Request to upload a file or directory, along with its `PathType`.
-    Upload(PathType),
+    Upload(),
 }
 
 /// Enum representing the types of IP addresses.
