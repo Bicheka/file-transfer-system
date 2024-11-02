@@ -1,13 +1,13 @@
-use std::{path::Path, time::Duration};
+use std::{ sync::Arc, time::Duration};
 
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, sync::Mutex, time};
 use bincode;
-use crate::{file_transfer::PathType, network::Request};
+use crate::network::Request;
 
 pub struct Client {
     server_address: String,
     timeout: Option<Duration>,
-    connection: Option<TcpStream>,  
+    connection: Arc<Mutex<Option<TcpStream>>>,  
 }
 
 impl Client {
@@ -15,7 +15,7 @@ impl Client {
         Self {
             server_address: server_address.to_string(),
             timeout: None,
-            connection: None
+            connection: Arc::new(Mutex::new(None))
         }
     }
 
@@ -31,15 +31,16 @@ impl Client {
 
         // Apply timeout to the connection attempt
         let stream = time::timeout(timeout_duration, connect_future).await??;
-        self.connection = Some(stream);
+        let mut connection = self.connection.lock().await;
+        *connection = Some(stream);
         Ok(())
     }
 
     /// Sends a request to the server.
-    pub async fn send_request(&mut self, path: &Path) -> Result<(), anyhow::Error> {
-        let path_type = match path.is_dir() {true => PathType::Directory, false => PathType::File};
-        if let Some(ref mut connection) = self.connection {
-            let request_bytes = bincode::serialize(&Request::Upload(path_type))?;
+    pub async fn send_request(&self, request: Request) -> Result<(), anyhow::Error> {
+        let mut connection = self.connection.lock().await;
+        if let Some(ref mut connection) = *connection {
+            let request_bytes = bincode::serialize(&request)?;
             let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
             
             // Apply timeout to the write operation
@@ -52,7 +53,8 @@ impl Client {
 
     /// Reads a response from the server.
     pub async fn read_response(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(ref mut connection) = self.connection {
+        let mut connection = self.connection.lock().await;
+        if let Some(ref mut connection) = *connection {
             let mut buffer = [0; 1024];
             let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
             
@@ -68,7 +70,8 @@ impl Client {
 
     /// Closes the connection to the server.
     pub async fn close(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(mut connection) = self.connection.take() {
+        let mut connection = self.connection.lock().await;
+        if let Some(mut connection) = connection.take() {
             connection.shutdown().await?;
         }
         Ok(())
