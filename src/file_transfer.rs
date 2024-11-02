@@ -117,7 +117,11 @@ impl FileTransferProtocol {
     }
 
     /// Initiates receiving a file or directory based on the `path_type` provided.
-    pub async fn init_receive(&self, connection: &mut Connection<'_>, path_type: &PathType) -> Result<(), TransferError> {
+    pub async fn init_receive(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        let path_type  = match self.path.is_dir(){
+            true => PathType::Directory,
+            false => PathType::File
+        };
         match path_type {
             PathType::File => self.receive_file(connection).await?,
             PathType::Directory => self.receive_directory(connection).await?
