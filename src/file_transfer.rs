@@ -56,12 +56,12 @@ impl FSObjectMetadata {
 
     /// Serializes the metadata to a byte vector for network transmission.
     pub fn to_bytes(&self) -> Vec<u8> {
-        bincode::serialize(self).unwrap()
+        bincode::serialize(self).expect("Could not serialize to bytes")
     }
 
     /// Deserializes metadata from a byte slice received over the network.
     pub fn from_bytes(bytes: &[u8]) -> Self {
-        bincode::deserialize(bytes).unwrap()
+        bincode::deserialize(bytes).expect("Could not deserialize from bytes")
     }
 }
 
@@ -202,6 +202,7 @@ impl FileTransferProtocol {
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        println!("Downloading directory");
         loop {
             let mut metadata_buffer = vec![0u8; 1024];
             let n = connection.read(&mut metadata_buffer).await?;
