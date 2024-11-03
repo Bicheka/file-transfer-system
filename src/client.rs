@@ -1,4 +1,4 @@
-use std::{ path::Path, sync::Arc, time::Duration};
+use std::{ net::{IpAddr, SocketAddr}, path::Path, sync::Arc, time::Duration};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
@@ -29,16 +29,16 @@ use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, ne
 ///   the client successfully connects to the server.
 pub struct Client {
     client_storage_path: String,
-    server_address: String,
+    server_address: IpAddr,
     timeout: Option<Duration>,
     connection: Arc<Mutex<Option<TcpStream>>>,  
 }
 
 impl Client {
-    pub fn new(client_storage_path: &str, server_address: &str) -> Self {
+    pub fn new(client_storage_path: &str, server_address: IpAddr) -> Self {
         Self {
             client_storage_path: client_storage_path.to_owned(),
-            server_address: server_address.to_owned(),
+            server_address,
             timeout: None,
             connection: Arc::new(Mutex::new(None))
         }
@@ -52,7 +52,8 @@ impl Client {
     /// Connects to the server.
     pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
         let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
-        let connect_future = TcpStream::connect(&self.server_address);
+        let addr = SocketAddr::new(self.server_address, 8080);
+        let connect_future = TcpStream::connect(addr);
 
         // Apply timeout to the connection attempt
         let stream = time::timeout(timeout_duration, connect_future).await??;

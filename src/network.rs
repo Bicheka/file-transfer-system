@@ -7,7 +7,6 @@ use local_ip_address::local_ip;
 pub enum Request {
     /// Request to retrieve a file or directory located at a given path.
     Get(Box<Path>),
-    /// Request to upload a file or directory, along with its `PathType`.
     Upload,
 }
 
