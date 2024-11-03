@@ -153,11 +153,12 @@ impl FileTransferProtocol {
 
     /// Receives a file in chunks and writes it to disk.
     pub async fn receive_file(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        println!("Creating file at path");
         let mut file = File::create(&self.path).await.map_err(TransferError::from)?;
-
+        println!("File created");
         let mut buffer = vec![0u8; self.chunk_size as usize];
         let mut total_bytes_received = 0;
-
+        println!("Copying data to file");
         loop {
             let n = connection.read(&mut buffer).await?;
             if n == 0 {
