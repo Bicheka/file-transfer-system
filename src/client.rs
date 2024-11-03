@@ -49,18 +49,23 @@ impl Client {
         self.timeout = Some(timeout);
     }
 
-    /// Connects to the server.
-    pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
-        let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
-        let addr = SocketAddr::new(self.server_address, 8080);
-        let connect_future = TcpStream::connect(addr);
+/// Connects to the server.
+pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
+    // Set the timeout duration
+    let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
+    let addr = SocketAddr::new(self.server_address, 8080);
 
-        // Apply timeout to the connection attempt
-        let stream = time::timeout(timeout_duration, connect_future).await??;
-        let mut connection = self.connection.lock().await;
-        *connection = Some(stream);
-        Ok(())
+    // Apply timeout to the connection attempt
+    match time::timeout(timeout_duration, TcpStream::connect(addr)).await {
+        Ok(Ok(stream)) => {
+            let mut connection = self.connection.lock().await; // Ensure you're using tokio::sync::Mutex
+            *connection = Some(stream);
+            Ok(())
+        },
+        Ok(Err(e)) => Err(anyhow::anyhow!("Connection error: {}", e)),
+        Err(_) => Err(anyhow::anyhow!("Connection attempt timed out")),
     }
+}
 
     /// Sends a request to the server. Ok if if ok to continue, Err if server declines for some reason
     pub async fn send_request(&self, request: Request) -> Result<(), anyhow::Error> {
