@@ -115,28 +115,6 @@ impl FileTransferProtocol {
         
     }
 
-    /// Initiates receiving a file or directory based on the `path_type` provided.
-    pub async fn init_receive(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        // listen for metadata
-
-        // if metadata is path receive path if not recieve file
-        
-        println!(" path: {:?} is dir: {}", self.path, self.path.is_dir());
-        let path_type  = match self.path.is_dir(){
-            true => PathType::Directory,
-            false => PathType::File
-        };
-        match path_type {
-            
-            PathType::File => {
-                let mut file = File::create(self.path.clone()).await?;
-                self.receive_file(connection, &mut file).await?
-            },
-            PathType::Directory => self.receive_directory(connection).await?
-        }
-        Ok(())
-    }
-
     /// Sends a file in chunks over the TCP connection.
     pub async fn send_file(&self, entry: &DirEntry, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = File::open(entry.path()).await.map_err(|_| TransferError::FileNotFound)?;
@@ -224,28 +202,28 @@ impl FileTransferProtocol {
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_directory(&self,  connection: &mut Connection<'_>) -> Result<(), TransferError> {
-         loop {
-        // Buffer for receiving serialized `FileEntry`
-        let mut entry_buffer = [0; 1024];
-        let bytes_read = connection.read(&mut entry_buffer).await?;
-        if bytes_read == 0 {
-            break; // Connection closed by sender, end of directory transfer
+        loop {
+            // Buffer for receiving serialized `FileEntry`
+            let mut entry_buffer = [0; 1024];
+            let bytes_read = connection.read(&mut entry_buffer).await?;
+            if bytes_read == 0 {
+                break; // Connection closed by sender, end of directory transfer
+            }
+
+            // Deserialize the FileEntry from the buffer
+            let entry: FileEntry = bincode::deserialize(&entry_buffer[..bytes_read]).expect("Could not deserialize FileEntry");
+            println!("Received entry: {:?}", entry);
+
+            if entry.is_dir {
+                // Create directory if it doesn’t exist
+                fs::create_dir_all(&entry.path).await?;
+            } else {
+                // Create the file and receive its contents
+                let mut file = File::create(&entry.path).await?;
+                self.receive_file(connection, &mut file).await?;
+            }
         }
 
-        // Deserialize the FileEntry from the buffer
-        let entry: FileEntry = bincode::deserialize(&entry_buffer[..bytes_read]).expect("Could not deserialize FileEntry");
-        println!("Received entry: {:?}", entry);
-
-        if entry.is_dir {
-            // Create directory if it doesn’t exist
-            fs::create_dir_all(&entry.path).await?;
-        } else {
-            // Create the file and receive its contents
-            let mut file = File::create(&entry.path).await?;
-            self.receive_file(connection, &mut file).await?;
-        }
-    }
-
-    Ok(())
+        Ok(())
     }
 }
