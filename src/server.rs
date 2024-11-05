@@ -1,5 +1,5 @@
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::AsyncReadExt,
     net::{TcpListener, TcpStream},
     sync::{Mutex, Notify},
 };
@@ -117,10 +117,7 @@ impl Server {
                                     continue;
                                 }
                             };
-                            let response = self.match_request(&request, &mut socket).await;
-
-                            let response = bincode::serialize(&response)?;
-                            socket.write_all(&response).await?;
+                            self.match_request(&request, &mut socket).await.expect("failed to match request");
                         }
                         Err(e) => {
                             eprintln!("Failed to read data from socket: {:?}", e);
