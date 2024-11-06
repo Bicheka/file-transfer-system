@@ -173,9 +173,12 @@ impl FileTransferProtocol {
                     
                     //Create metadata and send it over the connection
                     let entry_metadata = FileEntry::new(Path::new(&self.path), Path::new(&sub.path()));
-                    let serialized = bincode::serialize(&entry_metadata)
-                        .map_err(|_| TransferError::ChunkError)?;
+                    
+                    let serialized = bincode::serialize(&entry_metadata).map_err(|_| TransferError::ChunkError)?;
+                    let size_prefix = (serialized.len() as u32).to_be_bytes();
+                    connection.write(&size_prefix).await?;
                     connection.write(&serialized).await?;
+
 
                     if file_type.is_dir(){
                         let path = sub.path();
@@ -215,24 +218,33 @@ impl FileTransferProtocol {
     }
 
     /// Receives a directory and its contents recursively from the TCP connection.
-    pub async fn receive_directory(&self,  connection: &mut Connection<'_>) -> Result<(), TransferError> {
+    pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         loop {
-            // Buffer for receiving serialized `FileEntry`
-            let mut entry_buffer = vec![0; 1024];
-            let bytes_read = connection.read(&mut entry_buffer).await?;
+            // Receive entry size
+            let mut size_buffer = vec![0u8; 4];
+            let bytes_read = connection.read(&mut size_buffer).await?;
             if bytes_read == 0 {
                 break; // Connection closed by sender, end of directory transfer
             }
+            
+            let entry_size = u32::from_be_bytes(size_buffer[..4].try_into().unwrap()) as usize;
 
-            // Deserialize the FileEntry from the buffer
-            let entry: FileEntry = bincode::deserialize(&entry_buffer[..bytes_read]).expect("Could not deserialize FileEntry");
+            // Buffer for receiving serialized `FileEntry` of given size
+            let mut entry_buffer = vec![0; entry_size];
+            let bytes_read = connection.read(&mut entry_buffer).await?;
+            if bytes_read == 0 {
+                break;
+            }
+
+            // Deserialize the `FileEntry` from the buffer
+            let entry: FileEntry = bincode::deserialize(&entry_buffer[..bytes_read])
+                .map_err(|_| TransferError::ChunkError)?;
             println!("Received entry: {:?}", entry);
-            let entry_path = entry.vec_to_path();
-            let base_path = &self.path;
-            let full_path = base_path.join(entry_path);
+
+            let full_path = self.path.join(entry.vec_to_path());
+
             if entry.is_dir {
-                let receiving_path = &self.path.join(full_path);
-                fs::create_dir_all(receiving_path).await?;
+                fs::create_dir_all(&full_path).await?;
             } else {
                 // Create the file and receive its contents
                 let mut file = File::create(full_path).await?;
@@ -242,6 +254,7 @@ impl FileTransferProtocol {
 
         Ok(())
     }
+
 
 }
 
