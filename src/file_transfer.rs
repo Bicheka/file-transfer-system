@@ -87,9 +87,9 @@ impl<'a> Connection<'a> {
     }
 
     /// Reads data from the TCP stream into a buffer.
-    pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, TransferError> {
+    pub async fn read(&mut self, buffer: &mut Vec<u8>) -> Result<usize, TransferError> {
         self.stream
-            .read(buffer)
+            .read_to_end(buffer)
             .await
             .map_err(|e| TransferError::IoError(e.to_string()))
     }
@@ -218,7 +218,7 @@ impl FileTransferProtocol {
     pub async fn receive_directory(&self,  connection: &mut Connection<'_>) -> Result<(), TransferError> {
         loop {
             // Buffer for receiving serialized `FileEntry`
-            let mut entry_buffer = [0; 1024];
+            let mut entry_buffer = vec![0; 1024];
             let bytes_read = connection.read(&mut entry_buffer).await?;
             if bytes_read == 0 {
                 break; // Connection closed by sender, end of directory transfer
