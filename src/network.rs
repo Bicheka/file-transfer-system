@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path, str::FromStr};
+use std::{net::IpAddr, str::FromStr};
 use serde::{Deserialize, Serialize};
 use local_ip_address::local_ip;
 
@@ -6,7 +6,7 @@ use local_ip_address::local_ip;
 #[derive(Serialize, Deserialize)]
 pub enum Request {
     /// Request to retrieve a file or directory located at a given path.
-    Get(Box<Path>),
+    Get(String),
     Upload,
 }
 

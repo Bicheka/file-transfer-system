@@ -5,7 +5,6 @@ use tokio::{
 };
 use std::{
     net::{IpAddr, SocketAddr},
-    path::{Path, PathBuf},
     sync::Arc,
 };
 use bincode;
@@ -24,7 +23,7 @@ pub struct Server {
     /// The port on which the server listens.
     pub port: u16,
     /// The path to the directory where files are stored.
-    pub path: PathBuf,
+    pub path: String,
     /// Buffer size for file transfer operations.
     pub buffer_size: u64,
     /// Notification signal for stopping the server.
@@ -40,7 +39,7 @@ impl Server {
     /// - `port`: Port on which the server will listen.
     /// - `path`: Directory path for file storage and retrieval.
     /// - `buffer_size`: Size of the buffer used for file transfers.
-    pub fn new(ip: IpAddr, port: u16, path: &Path, buffer_size: u64, stop_signal: Arc<Notify>) -> Self {
+    pub fn new(ip: IpAddr, port: u16, path: &str, buffer_size: u64, stop_signal: Arc<Notify>) -> Self {
         let is_server_running = Arc::new(Mutex::new(false));
         Self {
             is_server_running,

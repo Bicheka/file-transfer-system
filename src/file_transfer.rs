@@ -105,9 +105,9 @@ pub struct FileTransferProtocol {
 
 impl FileTransferProtocol {
     /// Creates a new instance of `FileTransferProtocol`.
-    pub fn new(path: &Path, chunk_size: u64) -> Self {
+    pub fn new(path: &str, chunk_size: u64) -> Self {
         FileTransferProtocol {
-            path: path.to_owned(),
+            path: PathBuf::from(path),
             chunk_size,
         }
     }

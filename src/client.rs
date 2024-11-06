@@ -1,4 +1,4 @@
-use std::{ net::{IpAddr, SocketAddr}, path::Path, sync::Arc, time::Duration};
+use std::{ net::{IpAddr, SocketAddr}, sync::Arc, time::Duration};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
@@ -109,7 +109,7 @@ pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
     pub async fn send(&self, path_to_send: &str) -> Result<(), TransferError> {
         let mut connection = self.connection.lock().await;
         let connection = connection.as_mut().expect("Connection is not established");
-        FileTransferProtocol::new(&Path::new(path_to_send), 64 * 1024)
+        FileTransferProtocol::new(path_to_send, 64 * 1024)
             .init_send(&mut Connection { stream: connection })
             .await?;
         Ok(())
@@ -141,7 +141,7 @@ pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
     pub async fn download(&self) -> Result<(), TransferError>{
         let mut connection = self.connection.lock().await;
         let connection = connection.as_mut().expect("Connection is not established");
-        let ftp = FileTransferProtocol::new(&Path::new(&self.client_storage_path), 64 * 1024);
+        let ftp = FileTransferProtocol::new(&self.client_storage_path, 64 * 1024);
         ftp.receive_directory(&mut Connection {stream: connection}).await?;
         Ok(())
     }

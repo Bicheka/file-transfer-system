@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path, str::FromStr, sync::Arc};
+use std::{net::IpAddr, str::FromStr, sync::Arc};
 
 use file_transfer_system::{client:: Client, server::Server};
 use tokio::sync::Notify;
@@ -8,7 +8,7 @@ async fn test_client_connect(){
     let stop_signal = Arc::new(Notify::new());
     let stop_signal_clone = Arc::clone(&stop_signal);
     tokio::spawn(async move{
-        let mut server = Server::new( IpAddr::from_str("127.0.0.1").unwrap(), 8080, Path::new("/desktop"),  4096, stop_signal_clone);
+        let mut server = Server::new( IpAddr::from_str("127.0.0.1").unwrap(), 8080, "/desktop",  4096, stop_signal_clone);
         println!("{}", server.ip);
         server.start_server().await.unwrap();
     });
