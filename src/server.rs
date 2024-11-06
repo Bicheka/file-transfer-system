@@ -113,7 +113,7 @@ impl Server {
                             let request: Request = match bincode::deserialize(&buffer[..bytes_read]) {
                                 Ok(req) => req,
                                 Err(e) => {
-                                    eprintln!("Failed to deserialize request: {:?}", e);
+                                    eprintln!("Failed to deserialize request in server: {:?}", e);
                                     continue;
                                 }
                             };

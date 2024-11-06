@@ -40,23 +40,43 @@ pub enum PathType {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FileEntry {
-    path: String,
+    path: Vec<String>,
     is_dir: bool,
 }
-pub async fn get_inmediate_subdirectories_layer(mut dir: ReadDir) -> VecDeque<DirEntry> {
-    let mut subdirectories = VecDeque::new();
-    while let Ok(Some(entry)) = dir.next_entry().await {
-        if !entry.path().ends_with(".DS_Store") {
-            subdirectories.push_back(entry);
+
+impl FileEntry {
+    fn new(base: &Path, full: &Path) -> Result<FileEntry, String> {
+        let path = Self::path_difference_to_vec(base, full)
+            .ok_or_else(|| "Could not convert path to vector".to_owned())?;
+        let is_dir = full.is_dir();
+        
+        Ok(FileEntry { path, is_dir })
+    }
+
+    fn path_difference_to_vec(base: &Path, full: &Path) -> Option<Vec<String>> {
+        if let Ok(relative_path) = full.strip_prefix(base) {
+            Some(
+                relative_path
+                    .components()
+                    .map(|component| component.as_os_str().to_string_lossy().into_owned())
+                    .collect(),
+            )
+        } else {
+            None
         }
     }
-    subdirectories
+
+    fn vec_to_path(&self) -> PathBuf {
+        self.path.iter().collect::<PathBuf>()
+    }
 }
+
 /// Represents a connection over a TCP stream.
 pub struct Connection<'a> {
     /// The underlying TCP stream.
     pub stream: &'a mut TcpStream,
 }
+
 impl<'a> Connection<'a> {
     /// Writes data to the TCP stream.
     pub async fn write(&mut self, data: &[u8]) -> Result<(), TransferError> {
@@ -93,7 +113,6 @@ impl FileTransferProtocol {
     }
 
     /// Initiates sending a file or directory based on the `path` provided.
-
     pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         // Convert `self.path` to a `Path` reference if it's not already.
         let path = Path::new(&self.path);
@@ -137,25 +156,6 @@ impl FileTransferProtocol {
         Ok(())
     }
 
-    /// Receives a file in chunks and writes it to disk.
-    pub async fn receive_file(&self, connection: &mut Connection<'_>, file: &mut File) -> Result<(), TransferError> {
-        let mut buffer = vec![0u8; self.chunk_size as usize];
-        let mut total_bytes_received = 0;
-        loop {
-            let n = connection.read(&mut buffer).await?;
-            if n == 0 {
-                break;
-            }
-
-            file.write_all(&buffer[..n]).await.map_err(TransferError::from)?;
-            total_bytes_received += n as u64;
-
-            println!("Received {} bytes", total_bytes_received);
-        }
-
-        Ok(())
-    }
-
     /// Sends a directory and its contents recursively over the TCP connection.
     pub fn send_dir<'a>(
         &'a self,
@@ -172,10 +172,7 @@ impl FileTransferProtocol {
                     let file_type = sub.file_type().await?;
                     
                     //Create metadata and send it over the connection
-                    let entry_metadata = FileEntry {
-                        path: self.path.to_string_lossy().into_owned(),
-                        is_dir: file_type.is_dir(),
-                    };
+                    let entry_metadata = FileEntry::new(Path::new(&self.path), Path::new(&sub.path()));
                     let serialized = bincode::serialize(&entry_metadata)
                         .map_err(|_| TransferError::ChunkError)?;
                     connection.write(&serialized).await?;
@@ -198,7 +195,24 @@ impl FileTransferProtocol {
         })
     }
 
+    /// Receives a file in chunks and writes it to disk.
+    pub async fn receive_file(&self, connection: &mut Connection<'_>, file: &mut File) -> Result<(), TransferError> {
+        let mut buffer = vec![0u8; self.chunk_size as usize];
+        let mut total_bytes_received = 0;
+        loop {
+            let n = connection.read(&mut buffer).await?;
+            if n == 0 {
+                break;
+            }
 
+            file.write_all(&buffer[..n]).await.map_err(TransferError::from)?;
+            total_bytes_received += n as u64;
+
+            println!("Received {} bytes", total_bytes_received);
+        }
+
+        Ok(())
+    }
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_directory(&self,  connection: &mut Connection<'_>) -> Result<(), TransferError> {
@@ -213,17 +227,32 @@ impl FileTransferProtocol {
             // Deserialize the FileEntry from the buffer
             let entry: FileEntry = bincode::deserialize(&entry_buffer[..bytes_read]).expect("Could not deserialize FileEntry");
             println!("Received entry: {:?}", entry);
-
+            let entry_path = entry.vec_to_path();
+            let base_path = &self.path;
+            let full_path = base_path.join(entry_path);
             if entry.is_dir {
-                // Create directory if it doesn’t exist
-                fs::create_dir_all(&entry.path).await?;
+                let receiving_path = &self.path.join(full_path);
+                fs::create_dir_all(receiving_path).await?;
             } else {
                 // Create the file and receive its contents
-                let mut file = File::create(&entry.path).await?;
+                let mut file = File::create(full_path).await?;
                 self.receive_file(connection, &mut file).await?;
             }
         }
 
         Ok(())
     }
+
 }
+
+// utils
+pub async fn get_inmediate_subdirectories_layer(mut dir: ReadDir) -> VecDeque<DirEntry> {
+    let mut subdirectories = VecDeque::new();
+    while let Ok(Some(entry)) = dir.next_entry().await {
+        if !entry.path().ends_with(".DS_Store") {
+            subdirectories.push_back(entry);
+        }
+    }
+    subdirectories
+}
+
