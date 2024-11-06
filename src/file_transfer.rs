@@ -114,9 +114,11 @@ impl FileTransferProtocol {
 
     /// Initiates sending a file or directory based on the `path` provided.
     pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        
+        println!("Sending {} ...", &self.path.to_str().expect("could not convert path to str"));
+        
         // Convert `self.path` to a `Path` reference if it's not already.
         let path = Path::new(&self.path);
-
         if path.is_dir() {
             // If the path is a directory, initiate directory sending
             let read_dir = fs::read_dir(path).await?;
@@ -172,7 +174,7 @@ impl FileTransferProtocol {
                     let file_type = sub.file_type().await?;
                     
                     //Create metadata and send it over the connection
-                    let entry_metadata = FileEntry::new(Path::new(&self.path), Path::new(&sub.path()));
+                    let entry_metadata = FileEntry::new(Path::new(&self.path), Path::new(&sub.path())).expect("Could not serialize FileEntry");
                     
                     let serialized = bincode::serialize(&entry_metadata).map_err(|_| TransferError::ChunkError)?;
                     let size_prefix = (serialized.len() as u32).to_be_bytes();
