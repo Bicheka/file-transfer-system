@@ -231,30 +231,42 @@ impl FileTransferProtocol {
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-    loop {
+        // Read and create the root directory first
         let mut size_buffer = [0u8; 4];
-        let bytes_read = connection.read(&mut size_buffer).await?;
-        if bytes_read == 0 {
-            break;
-        }
-
+        connection.read(&mut size_buffer).await?;
         let entry_size = u32::from_be_bytes(size_buffer) as usize;
+
         let mut entry_buffer = vec![0u8; entry_size];
         connection.read(&mut entry_buffer).await?;
 
-        let entry: FileEntry = bincode::deserialize(&entry_buffer)
+        let root_entry: FileEntry = bincode::deserialize(&entry_buffer)
             .map_err(|_| TransferError::ChunkError)?;
-        println!("Received entry: {:?}", entry);
+        let root_path = self.path.join(root_entry.vec_to_path());
+        fs::create_dir_all(&root_path).await?;
+        loop {
+            let mut size_buffer = [0u8; 4];
+            let bytes_read = connection.read(&mut size_buffer).await?;
+            if bytes_read == 0 {
+                break;
+            }
 
-        let full_path = self.path.join(entry.vec_to_path());
-        if entry.is_dir {
-            fs::create_dir_all(&full_path).await?;
-        } else {
-            let mut file = File::create(full_path).await?;
-            self.receive_file(connection, &mut file).await?;
+            let entry_size = u32::from_be_bytes(size_buffer) as usize;
+            let mut entry_buffer = vec![0u8; entry_size];
+            connection.read(&mut entry_buffer).await?;
+
+            let entry: FileEntry = bincode::deserialize(&entry_buffer)
+                .map_err(|_| TransferError::ChunkError)?;
+            println!("Received entry: {:?}", entry);
+
+            let full_path = self.path.join(entry.vec_to_path());
+            if entry.is_dir {
+                fs::create_dir_all(&full_path).await?;
+            } else {
+                let mut file = File::create(full_path).await?;
+                self.receive_file(connection, &mut file).await?;
+            }
         }
-    }
-    Ok(())
+        Ok(())
     }
 
 
