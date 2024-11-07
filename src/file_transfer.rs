@@ -87,9 +87,9 @@ impl<'a> Connection<'a> {
     }
 
     /// Reads data from the TCP stream into a buffer.
-    pub async fn read(&mut self, buffer: &mut Vec<u8>) -> Result<usize, TransferError> {
+    pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, TransferError> {
         self.stream
-            .read_to_end(buffer)
+            .read_exact(buffer)
             .await
             .map_err(|e| TransferError::IoError(e.to_string()))
     }
@@ -115,7 +115,16 @@ impl FileTransferProtocol {
     /// Initiates sending a file or directory based on the `path` provided.
     pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         
-        println!("Sending {} ...", &self.path.to_str().expect("could not convert path to str"));
+        let root_entry = FileEntry::new(Path::new(&self.path), Path::new(&self.path))
+        .expect("Could not create root FileEntry");
+
+        // Serialize and send the root folder entry
+        let serialized = bincode::serialize(&root_entry).map_err(|_| TransferError::ChunkError)?;
+        let size_prefix = (serialized.len() as u32).to_be_bytes();
+        connection.write(&size_prefix).await?;
+        connection.write(&serialized).await?;
+
+        println!("Sending directory {} ...", self.path.display());
         
         // Convert `self.path` to a `Path` reference if it's not already.
         let path = Path::new(&self.path);
@@ -221,40 +230,30 @@ impl FileTransferProtocol {
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        loop {
-            // Receive entry size
-            let mut size_buffer = vec![0u8; 4];
-            let bytes_read = connection.read(&mut size_buffer).await?;
-            if bytes_read == 0 {
-                break; // Connection closed by sender, end of directory transfer
-            }
-            
-            let entry_size = u32::from_be_bytes(size_buffer[..4].try_into().unwrap()) as usize;
-
-            // Buffer for receiving serialized `FileEntry` of given size
-            let mut entry_buffer = vec![0; entry_size];
-            let bytes_read = connection.read(&mut entry_buffer).await?;
-            if bytes_read == 0 {
-                break;
-            }
-
-            // Deserialize the `FileEntry` from the buffer
-            let entry: FileEntry = bincode::deserialize(&entry_buffer[..bytes_read])
-                .map_err(|_| TransferError::ChunkError)?;
-            println!("Received entry: {:?}", entry);
-
-            let full_path = self.path.join(entry.vec_to_path());
-
-            if entry.is_dir {
-                fs::create_dir_all(&full_path).await?;
-            } else {
-                // Create the file and receive its contents
-                let mut file = File::create(full_path).await?;
-                self.receive_file(connection, &mut file).await?;
-            }
+    loop {
+        let mut size_buffer = [0u8; 4];
+        let bytes_read = connection.read(&mut size_buffer).await?;
+        if bytes_read == 0 {
+            break;
         }
 
-        Ok(())
+        let entry_size = u32::from_be_bytes(size_buffer) as usize;
+        let mut entry_buffer = vec![0u8; entry_size];
+        connection.read(&mut entry_buffer).await?;
+
+        let entry: FileEntry = bincode::deserialize(&entry_buffer)
+            .map_err(|_| TransferError::ChunkError)?;
+        println!("Received entry: {:?}", entry);
+
+        let full_path = self.path.join(entry.vec_to_path());
+        if entry.is_dir {
+            fs::create_dir_all(&full_path).await?;
+        } else {
+            let mut file = File::create(full_path).await?;
+            self.receive_file(connection, &mut file).await?;
+        }
+    }
+    Ok(())
     }
 
 
