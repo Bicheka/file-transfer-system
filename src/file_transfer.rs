@@ -121,12 +121,9 @@ impl FileTransferProtocol {
 
     /// Initiates sending a file or directory based on the `path` provided.
     pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-    
-        // Convert `self.path` to a `Path` reference if it's not already.
-        let path = Path::new(&self.path);
-        if path.is_dir() {
-            let root_entry = FileEntry::new(Path::new(&self.path), path)
-            .expect("Could not create root FileEntry");
+        
+        if self.path.is_dir() {
+            let root_entry = FileEntry::from_root_path(self.path.file_name().expect("could not get root name").to_str().expect("culd not convert to str"));
 
             // Serialize and send the root folder entry
             let serialized = bincode::serialize(&root_entry).map_err(|_| TransferError::ChunkError)?;
@@ -136,8 +133,8 @@ impl FileTransferProtocol {
 
             println!("Sending directory {} ...", self.path.display());
 
-            // If the path is a directory, initiate directory sending
-            let read_dir = fs::read_dir(path).await?;
+            // initiate directory sending
+            let read_dir = fs::read_dir(&self.path).await?;
             let queue = VecDeque::from([read_dir]);  // Add initial directory to the queue
             self.send_dir(connection, queue).await?;
         } else {
