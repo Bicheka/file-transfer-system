@@ -53,21 +53,23 @@ impl FileEntry {
         Ok(FileEntry { path, is_dir })
     }
 
-    pub fn from_root_path(path: &str) -> Self{
-        Self{
-            path: Vec::from([path.to_owned()]),
-            is_dir: true
-        }
-    }
-
     pub fn path_difference_to_vec(base: &Path, full: &Path) -> Option<Vec<String>> {
         if let Ok(relative_path) = full.strip_prefix(base) {
-            Some(
+            let mut path_vec: Vec<String> = vec![];
+
+            // Add the last component of the base path as the "root"
+            if let Some(root_name) = base.components().last() {
+                path_vec.push(root_name.as_os_str().to_string_lossy().into_owned());
+            }
+
+            // Append the components of the relative path
+            path_vec.extend(
                 relative_path
                     .components()
                     .map(|component| component.as_os_str().to_string_lossy().into_owned())
-                    .collect(),
-            )
+            );
+
+            Some(path_vec)
         } else {
             None
         }
@@ -123,13 +125,6 @@ impl FileTransferProtocol {
     pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         
         if self.path.is_dir() {
-            let root_entry = FileEntry::from_root_path(self.path.file_name().expect("could not get root name").to_str().expect("culd not convert to str"));
-
-            // Serialize and send the root folder entry
-            let serialized = bincode::serialize(&root_entry).map_err(|_| TransferError::ChunkError)?;
-            let size_prefix = (serialized.len() as u32).to_be_bytes();
-            connection.write(&size_prefix).await?;
-            connection.write(&serialized).await?;
 
             println!("Sending directory {} ...", self.path.display());
 
@@ -235,18 +230,6 @@ impl FileTransferProtocol {
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        // Read and create the root directory first
-        let mut size_buffer = [0u8; 4];
-        connection.read(&mut size_buffer).await?;
-        let entry_size = u32::from_be_bytes(size_buffer) as usize;
-
-        let mut entry_buffer = vec![0u8; entry_size];
-        connection.read(&mut entry_buffer).await?;
-
-        let root_entry: FileEntry = bincode::deserialize(&entry_buffer)
-            .map_err(|_| TransferError::ChunkError)?;
-        let root_path = self.path.join(root_entry.vec_to_path());
-        fs::create_dir_all(&root_path).await?;
         loop {
             let mut size_buffer = [0u8; 4];
             let bytes_read = connection.read(&mut size_buffer).await?;
