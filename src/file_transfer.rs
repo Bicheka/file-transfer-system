@@ -39,13 +39,13 @@ pub enum PathType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct FileEntry {
+pub struct FileEntry {
     path: Vec<String>,
     is_dir: bool,
 }
 
 impl FileEntry {
-    fn new(base: &Path, full: &Path) -> Result<FileEntry, String> {
+    pub fn new(base: &Path, full: &Path) -> Result<FileEntry, String> {
         let path = Self::path_difference_to_vec(base, full)
             .ok_or_else(|| "Could not convert path to vector".to_owned())?;
         let is_dir = full.is_dir();
@@ -53,7 +53,14 @@ impl FileEntry {
         Ok(FileEntry { path, is_dir })
     }
 
-    fn path_difference_to_vec(base: &Path, full: &Path) -> Option<Vec<String>> {
+    pub fn from_root_path(path: &str) -> Self{
+        Self{
+            path: Vec::from([path.to_owned()]),
+            is_dir: true
+        }
+    }
+
+    pub fn path_difference_to_vec(base: &Path, full: &Path) -> Option<Vec<String>> {
         if let Ok(relative_path) = full.strip_prefix(base) {
             Some(
                 relative_path
@@ -66,7 +73,7 @@ impl FileEntry {
         }
     }
 
-    fn vec_to_path(&self) -> PathBuf {
+    pub fn vec_to_path(&self) -> PathBuf {
         self.path.iter().collect::<PathBuf>()
     }
 }
