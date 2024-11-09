@@ -184,16 +184,14 @@ impl FileTransferProtocol {
                     
                     //Create metadata and send it over the connection
                     let entry_metadata = FileEntry::new(Path::new(&self.path), Path::new(&sub.path())).expect("Could not serialize FileEntry");
-                    
+                    println!("entry metadata: {:?}", entry_metadata.path);
                     let serialized = bincode::serialize(&entry_metadata).map_err(|_| TransferError::ChunkError)?;
                     let size_prefix = (serialized.len() as u32).to_be_bytes();
                     connection.write(&size_prefix).await?;
                     connection.write(&serialized).await?;
 
-
                     if file_type.is_dir(){
-                        let path = sub.path();
-                        let read_dir = fs::read_dir(path).await?;
+                        let read_dir = fs::read_dir(sub.path()).await?;
                         new_queue.push_back(read_dir);
                     }
                     else {
@@ -201,6 +199,9 @@ impl FileTransferProtocol {
                     }
                 }
             }
+            println!("finished layer");
+            println!();
+            println!();
 
             if !new_queue.is_empty(){
                 self.send_dir(connection, new_queue).await?;
@@ -244,8 +245,9 @@ impl FileTransferProtocol {
             let entry: FileEntry = bincode::deserialize(&entry_buffer)
                 .map_err(|_| TransferError::ChunkError)?;
             println!("Received entry: {:?}", entry);
-
+            println!();
             let full_path = self.path.join(entry.vec_to_path());
+            println!("full path: {:?}", full_path);
             if entry.is_dir {
                 fs::create_dir_all(&full_path).await?;
             } else {
