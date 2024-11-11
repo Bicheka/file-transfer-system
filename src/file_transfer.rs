@@ -145,8 +145,7 @@ impl FileTransferProtocol {
     pub async fn send_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = tokio::fs::File::open(file_path).await.map_err(|_| TransferError::FileNotFound)?;
 
-        // Use a fixed-size array buffer, e.g., 64 KB
-        let mut buffer = [0u8; 65536];
+        let mut buffer = vec![0u8; 65536]; // Allocates on the heap
         let mut total_bytes_sent = 0;
 
         loop {
@@ -196,8 +195,8 @@ impl FileTransferProtocol {
     pub async fn receive_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = tokio::fs::File::create(file_path).await?;
         
-        // Use a fixed-size array buffer, e.g., 64 KB
-        let mut buffer = [0u8; 65536];
+        let mut buffer = vec![0u8; 65536]; // Allocates on the heap
+
         let mut total_bytes_received = 0;
 
         loop {
