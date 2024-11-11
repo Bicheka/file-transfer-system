@@ -231,9 +231,9 @@ impl FileTransferProtocol {
         self.receive_file(&file_path, connection).await?;
         println!("file received");
         println!("uzipping");
-        // unzip_file(
-        //     file_path.to_str().unwrap(), 
-        //     self.path.to_str().unwrap()).unwrap();
+        unzip_file(
+            file_path.to_str().unwrap(), 
+            self.path.to_str().unwrap()).unwrap();
         Ok(())
     }
 }
