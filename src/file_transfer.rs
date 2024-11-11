@@ -164,7 +164,7 @@ impl FileTransferProtocol {
             total_bytes_sent += n as u64;
             println!("Sent {} bytes so far", total_bytes_sent);
         }
-
+        drop(file);
         println!("Total bytes sent: {}", total_bytes_sent);
         Ok(())
     }
@@ -215,7 +215,7 @@ impl FileTransferProtocol {
             total_bytes_received += n as u64;
             println!("Received {} bytes so far", total_bytes_received);
         }
-        
+        drop(file);
         println!("Total bytes received: {}", total_bytes_received);
         Ok(())
     }
@@ -231,11 +231,9 @@ impl FileTransferProtocol {
         self.receive_file(&file_path, connection).await?;
         println!("file received");
         println!("uzipping");
-        unzip_file(
-            file_path.to_str().unwrap(), 
-            self.path.to_str().unwrap()).unwrap();
+        // unzip_file(
+        //     file_path.to_str().unwrap(), 
+        //     self.path.to_str().unwrap()).unwrap();
         Ok(())
     }
-
-
 }
