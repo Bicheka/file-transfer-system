@@ -39,23 +39,15 @@ pub enum PathType {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FileMetadata {
     pub name: String,      // Name of the file or directory (relative path)
-    pub is_dir: bool,      // Whether it's a directory
     pub size: u64,         // Size of the file (in bytes, 0 for directories)
     pub checksum: Option<String>, // Optional checksum to verify integrity
 }
 
 impl FileMetadata {
-    pub fn new(path: &Path) -> FileMetadata {
+    pub fn new(path: &Path, size: u64) -> FileMetadata {
         let name = path.file_name().unwrap().to_str().unwrap().to_owned();
-        let is_dir = path.is_dir();
-        let size = if is_dir {
-            0 // No size for directories
-        } else {
-            path.metadata().map(|meta| meta.len()).unwrap_or(0)
-        };
         FileMetadata {
             name,
-            is_dir,
             size,
             checksum: None, // Can be calculated if needed
         }
@@ -143,8 +135,12 @@ impl FileTransferProtocol {
 
     /// Sends a single file in chunks over the TCP connection using a fixed-size buffer.
     pub async fn send_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        let mut file = tokio::fs::File::open(file_path).await.map_err(|_| TransferError::FileNotFound)?;
-
+        let mut file = tokio::fs::File::open(&file_path).await.map_err(|_| TransferError::FileNotFound)?;
+        let metadata = file.metadata().await?;
+        
+        // send file metadata to receiving side
+        self.send_metadata(connection, &FileMetadata::new(&file_path, metadata.len())).await?;
+        
         let mut buffer = vec![0u8; 65536]; // Allocates on the heap
         let mut total_bytes_sent = 0;
 
@@ -176,10 +172,6 @@ impl FileTransferProtocol {
     ) -> BoxFuture<'a, Result<(), TransferError>> {
         Box::pin(async move {
             let path = self.path.clone();  // Clone the path here
-
-            // send file metadata to receiving side
-            self.send_metadata(connection, &FileMetadata::new(&path)).await?;
-            
             let zip_path = path.with_extension("zip");
             let zip_clone = zip_path.clone();
             let handle = tokio::task::spawn_blocking( move || {
@@ -192,26 +184,17 @@ impl FileTransferProtocol {
     }
 
     /// Receives a file in chunks and writes it to disk.
-    pub async fn receive_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+    pub async fn receive_file(&self, file_path: &Path, connection: &mut Connection<'_>, expected_size: u64) -> Result<(), TransferError> {
         let mut file = tokio::fs::File::create(file_path).await?;
-        
-        let mut buffer = vec![0u8; 65536]; // Allocates on the heap
-
+        let mut buffer = vec![0u8; 65536];
         let mut total_bytes_received = 0;
 
-        loop {
-            // Attempt to read into the fixed-size array buffer
+        while total_bytes_received < expected_size {
             let n = connection.read(&mut buffer).await?;
             if n == 0 {
-                // End-of-stream; sender has closed the connection
-                println!("End of stream reached, file transfer complete.");
-                break;
+                return Err(TransferError::ConnectionClosed); // Handle unexpected disconnection
             }
-
-            // Write only the received bytes to file
-            file.write_all(&buffer[..n]).await.map_err(TransferError::from)?;
-
-            // Track total bytes received and print the progress
+            file.write_all(&buffer[..n]).await?;
             total_bytes_received += n as u64;
             println!("Received {} bytes so far", total_bytes_received);
         }
@@ -226,9 +209,9 @@ impl FileTransferProtocol {
         
         let metadata = self.receive_metadata(connection).await?;
         println!("Metadata: {:?}", metadata);
-        let file_path = self.path.join(metadata.name).with_extension("zip");
+        let file_path = self.path.join(metadata.name);
         println!("file path: {:?}", file_path);
-        self.receive_file(&file_path, connection).await?;
+        self.receive_file(&file_path, connection, metadata.size).await?;
         println!("file received");
         println!("uzipping");
         unzip_file(
