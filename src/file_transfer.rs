@@ -64,12 +64,10 @@ impl FileMetadata {
 
 /// Represents a connection over a TCP stream.
 pub struct Connection<'a> {
-    /// The underlying TCP stream.
     pub stream: &'a mut TcpStream,
 }
 
 impl<'a> Connection<'a> {
-    /// Writes data to the TCP stream.
     pub async fn write(&mut self, data: &[u8]) -> Result<(), TransferError> {
         self.stream
             .write_all(data)
@@ -77,10 +75,9 @@ impl<'a> Connection<'a> {
             .map_err(|e| TransferError::IoError(e.to_string()))
     }
 
-    /// Reads data from the TCP stream into a buffer.
     pub async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, TransferError> {
         self.stream
-            .read_exact(buffer)
+            .read(buffer)
             .await
             .map_err(|e| TransferError::IoError(e.to_string()))
     }
@@ -144,25 +141,32 @@ impl FileTransferProtocol {
 
 
 
-    /// Sends a single file in chunks over the TCP connection.
+    /// Sends a single file in chunks over the TCP connection using a fixed-size buffer.
     pub async fn send_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = tokio::fs::File::open(file_path).await.map_err(|_| TransferError::FileNotFound)?;
 
-        let mut buffer = vec![0u8; self.chunk_size as usize];
+        // Use a fixed-size array buffer, e.g., 64 KB
+        let mut buffer = [0u8; 65536];
         let mut total_bytes_sent = 0;
 
         loop {
+            // Read a chunk from the file into the fixed-size buffer
             let n = file.read(&mut buffer).await.map_err(TransferError::from)?;
             if n == 0 {
+                // End-of-file; file read is complete
+                println!("End of file reached, file transfer complete.");
                 break;
             }
 
+            // Write the buffer contents to the connection
             connection.write(&buffer[..n]).await?;
-            total_bytes_sent += n as u64;
 
-            println!("Sent {} bytes", total_bytes_sent);
+            // Track total bytes sent and print progress
+            total_bytes_sent += n as u64;
+            println!("Sent {} bytes so far", total_bytes_sent);
         }
 
+        println!("Total bytes sent: {}", total_bytes_sent);
         Ok(())
     }
 
@@ -191,21 +195,29 @@ impl FileTransferProtocol {
     /// Receives a file in chunks and writes it to disk.
     pub async fn receive_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         let mut file = tokio::fs::File::create(file_path).await?;
-        println!("File: {:?}", file);
-        let mut buffer = vec![0u8; self.chunk_size as usize];
+        
+        // Use a fixed-size array buffer, e.g., 64 KB
+        let mut buffer = [0u8; 65536];
         let mut total_bytes_received = 0;
+
         loop {
+            // Attempt to read into the fixed-size array buffer
             let n = connection.read(&mut buffer).await?;
             if n == 0 {
+                // End-of-stream; sender has closed the connection
+                println!("End of stream reached, file transfer complete.");
                 break;
             }
 
+            // Write only the received bytes to file
             file.write_all(&buffer[..n]).await.map_err(TransferError::from)?;
-            total_bytes_received += n as u64;
 
-            println!("Received {} bytes", total_bytes_received);
+            // Track total bytes received and print the progress
+            total_bytes_received += n as u64;
+            println!("Received {} bytes so far", total_bytes_received);
         }
-        println!("{}",total_bytes_received);
+        
+        println!("Total bytes received: {}", total_bytes_received);
         Ok(())
     }
 
@@ -217,8 +229,9 @@ impl FileTransferProtocol {
         println!("Metadata: {:?}", metadata);
         let file_path = self.path.with_file_name(metadata.name).with_extension("zip");
         println!("file path: {:?}", file_path);
-
         self.receive_file(&file_path, connection).await?;
+        println!("file received");
+        println!("uzipping");
         unzip_file(
             file_path.to_str().unwrap(), 
             self.path.to_str().unwrap()).unwrap();
