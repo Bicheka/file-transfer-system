@@ -226,7 +226,7 @@ impl FileTransferProtocol {
         
         let metadata = self.receive_metadata(connection).await?;
         println!("Metadata: {:?}", metadata);
-        let file_path = self.path.with_file_name(metadata.name).with_extension("zip");
+        let file_path = self.path.join(metadata.name).with_extension("zip");
         println!("file path: {:?}", file_path);
         self.receive_file(&file_path, connection).await?;
         println!("file received");
