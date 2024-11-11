@@ -1,11 +1,10 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::fs::{self, DirEntry, File, ReadDir};
 use tokio::net::TcpStream;
-use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::io::Error as IoError;
 use serde::{Serialize, Deserialize};
 use futures::future::BoxFuture;
+use crate::compression::{start_compressing, unzip_file};
 
 /// Represents various errors that can occur during file transfer operations.
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +19,6 @@ pub enum TransferError {
     FileCorrupted,
     /// Error encountered when handling chunks.
     ChunkError,
-    // Additional error types can be added here
 }
 
 impl From<IoError> for TransferError {
@@ -104,6 +102,7 @@ impl<'a> Connection<'a> {
     }
 }
 
+
 /// Defines the file transfer protocol, allowing files and directories to be transferred.
 pub struct FileTransferProtocol {
     /// The path of the file or directory to transfer.
@@ -122,32 +121,21 @@ impl FileTransferProtocol {
     }
 
     /// Initiates sending a file or directory based on the `path` provided.
-    pub async fn init_send(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        
-        if self.path.is_dir() {
-
-            println!("Sending directory {} ...", self.path.display());
-
-            // initiate directory sending
-            let read_dir = fs::read_dir(&self.path).await?;
-            let queue = VecDeque::from([read_dir]);  // Add initial directory to the queue
-            self.send_dir(connection, queue).await?;
-        } else {
-            println!("Sending file {} ...", self.path.display());
-            // If the path is a file, initiate file sending
-            let mut rd = fs::read_dir(&self.path).await?;
-            let dir = rd.next_entry().await.unwrap();
-            let dir = dir.unwrap();
-            self.send_file(&dir, connection).await?;
+    pub async fn init_send(&self, connection : &mut Connection<'_>) -> Result<(), TransferError> {
+        let is_file = self.path.is_file();
+        if is_file{
+            self.send_file(&self.path, connection).await.expect("Could not send file");
         }
-        
+        else{
+            self.send_dir(connection).await.unwrap();
+        }
+
         Ok(())
-        
     }
 
-    /// Sends a file in chunks over the TCP connection.
-    pub async fn send_file(&self, entry: &DirEntry, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        let mut file = File::open(entry.path()).await.map_err(|_| TransferError::FileNotFound)?;
+    /// Sends a single file in chunks over the TCP connection.
+    pub async fn send_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        let mut file = tokio::fs::File::open(file_path).await.map_err(|_| TransferError::FileNotFound)?;
 
         let mut buffer = vec![0u8; self.chunk_size as usize];
         let mut total_bytes_sent = 0;
@@ -171,47 +159,23 @@ impl FileTransferProtocol {
     pub fn send_dir<'a>(
         &'a self,
         connection: &'a mut Connection<'_>,
-        mut queue: VecDeque<ReadDir>,
     ) -> BoxFuture<'a, Result<(), TransferError>> {
         Box::pin(async move {
-            let mut new_queue: VecDeque<ReadDir> = VecDeque::new();
-            // for each dir in queue get all its inmediate subdirectories
-            while let Some(dir) = queue.pop_front() {
-                let mut subdirectories = get_inmediate_subdirectories_layer(dir).await;
-                // for each subdirectory check if it is a file or a folder if it is a folder add it to the new_queue if it is a file send it
-                while let Some(sub) = subdirectories.pop_front(){
-                    let file_type = sub.file_type().await?;
-                    
-                    //Create metadata and send it over the connection
-                    let entry_metadata = FileEntry::new(Path::new(&self.path), Path::new(&sub.path())).expect("Could not serialize FileEntry");
-                    println!("entry metadata: {:?}", entry_metadata.path);
-                    let serialized = bincode::serialize(&entry_metadata).map_err(|_| TransferError::ChunkError)?;
-                    let size_prefix = (serialized.len() as u32).to_be_bytes();
-                    connection.write(&size_prefix).await?;
-                    connection.write(&serialized).await?;
-
-                    if file_type.is_dir(){
-                        let read_dir = fs::read_dir(sub.path()).await?;
-                        new_queue.push_back(read_dir);
-                    }
-                    else {
-                        self.send_file(&sub, connection).await?;
-                    }
-                }
-            }
-            println!("finished layer");
-            println!();
-            println!();
-
-            if !new_queue.is_empty(){
-                self.send_dir(connection, new_queue).await?;
-            }
+            let path = self.path.clone();  // Clone the path here
+            let zip_path = path.with_extension("zip");
+            let zip_clone = zip_path.clone();
+            let handle = tokio::task::spawn_blocking( move || {
+                start_compressing(&path, &zip_path, zip::CompressionMethod::Deflated).expect("Could not compress directory");
+            });
+            handle.await.unwrap();
+            self.send_file(&zip_clone, connection).await?;
             Ok(())
         })
     }
 
     /// Receives a file in chunks and writes it to disk.
-    pub async fn receive_file(&self, connection: &mut Connection<'_>, file: &mut File) -> Result<(), TransferError> {
+    pub async fn receive_file(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        let mut file = tokio::fs::File::create_new(&self.path).await?;
         let mut buffer = vec![0u8; self.chunk_size as usize];
         let mut total_bytes_received = 0;
         loop {
@@ -230,45 +194,11 @@ impl FileTransferProtocol {
     }
 
     /// Receives a directory and its contents recursively from the TCP connection.
-    pub async fn receive_directory(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        loop {
-            let mut size_buffer = [0u8; 4];
-            let bytes_read = connection.read(&mut size_buffer).await?;
-            if bytes_read == 0 {
-                break;
-            }
-
-            let entry_size = u32::from_be_bytes(size_buffer) as usize;
-            let mut entry_buffer = vec![0u8; entry_size];
-            connection.read(&mut entry_buffer).await?;
-
-            let entry: FileEntry = bincode::deserialize(&entry_buffer)
-                .map_err(|_| TransferError::ChunkError)?;
-            println!("Received entry: {:?}", entry);
-            println!();
-            let full_path = self.path.join(entry.vec_to_path());
-            println!("full path: {:?}", full_path);
-            if entry.is_dir {
-                fs::create_dir_all(&full_path).await?;
-            } else {
-                let mut file = File::create(full_path).await?;
-                self.receive_file(connection, &mut file).await?;
-            }
-        }
+    pub async fn receive_dir(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        self.receive_file(connection).await?;
+        unzip_file(self.path.with_extension("zip").to_str().unwrap(), self.path.to_str().unwrap()).unwrap();
         Ok(())
     }
 
 
 }
-
-// utils
-pub async fn get_inmediate_subdirectories_layer(mut dir: ReadDir) -> VecDeque<DirEntry> {
-    let mut subdirectories = VecDeque::new();
-    while let Ok(Some(entry)) = dir.next_entry().await {
-        if !entry.path().ends_with(".DS_Store") {
-            subdirectories.push_back(entry);
-        }
-    }
-    subdirectories
-}
-

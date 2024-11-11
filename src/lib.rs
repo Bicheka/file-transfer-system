@@ -20,3 +20,6 @@ pub mod graceful_shutdown;
 
 /// Core file transfer functionality for sending and receiving files and directories.
 pub mod file_transfer;
+
+// Logic to compress directories into .zip
+pub mod compression;
