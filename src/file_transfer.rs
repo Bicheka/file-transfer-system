@@ -215,8 +215,8 @@ impl FileTransferProtocol {
         println!("file received");
         println!("uzipping");
         unzip_file(
-            file_path.to_str().unwrap(), 
-            self.path.to_str().unwrap()).unwrap();
+            file_path.to_str().unwrap(), // foo.zip
+            file_path.with_extension("").to_str().unwrap()).unwrap(); // foo
         Ok(())
     }
 }
