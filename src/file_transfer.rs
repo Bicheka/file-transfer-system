@@ -46,7 +46,7 @@ pub struct FileMetadata {
 
 impl FileMetadata {
     pub fn new(path: &Path) -> FileMetadata {
-        let name = path.to_string_lossy().into_owned();
+        let name = path.file_name().unwrap().to_str().unwrap().to_owned();
         let is_dir = path.is_dir();
         let size = if is_dir {
             0 // No size for directories
@@ -189,8 +189,9 @@ impl FileTransferProtocol {
     }
 
     /// Receives a file in chunks and writes it to disk.
-    pub async fn receive_file(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
-        let mut file = tokio::fs::File::create(&self.path).await?;
+    pub async fn receive_file(&self, file_path: &Path, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+        let mut file = tokio::fs::File::create(file_path).await?;
+        println!("File: {:?}", file);
         let mut buffer = vec![0u8; self.chunk_size as usize];
         let mut total_bytes_received = 0;
         loop {
@@ -204,20 +205,22 @@ impl FileTransferProtocol {
 
             println!("Received {} bytes", total_bytes_received);
         }
-
+        println!("{}",total_bytes_received);
         Ok(())
     }
 
     /// Receives a directory and its contents recursively from the TCP connection.
     pub async fn receive_dir(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         println!("Recieving directory to path: {:?}", self.path);
+        
         let metadata = self.receive_metadata(connection).await?;
-        self.receive_file(connection).await?;
+        println!("Metadata: {:?}", metadata);
+        let file_path = self.path.with_file_name(metadata.name).with_extension("zip");
+        println!("file path: {:?}", file_path);
+
+        self.receive_file(&file_path, connection).await?;
         unzip_file(
-            self.path
-                .with_file_name(metadata.name)
-                .with_extension("zip").to_str()
-                .unwrap(), 
+            file_path.to_str().unwrap(), 
             self.path.to_str().unwrap()).unwrap();
         Ok(())
     }
