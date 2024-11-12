@@ -142,7 +142,7 @@ pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
         let mut connection = self.connection.lock().await;
         let connection = connection.as_mut().expect("Connection is not established");
         let ftp = FileTransferProtocol::new(&self.client_storage_path, 64 * 1024);
-        ftp.receive_dir(&mut Connection {stream: connection}).await?;
+        ftp.receive(&mut Connection {stream: connection}).await?;
         Ok(())
     }
 

@@ -204,19 +204,22 @@ impl FileTransferProtocol {
     }
 
     /// Receives a directory and its contents recursively from the TCP connection.
-    pub async fn receive_dir(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
+    pub async fn receive(&self, connection: &mut Connection<'_>) -> Result<(), TransferError> {
         println!("Recieving directory to path: {:?}", self.path);
-        
         let metadata = self.receive_metadata(connection).await?;
         println!("Metadata: {:?}", metadata);
         let file_path = self.path.join(metadata.name);
         println!("file path: {:?}", file_path);
         self.receive_file(&file_path, connection, metadata.size).await?;
         println!("file received");
-        println!("uzipping");
-        unzip_file(
+        if file_path.ends_with(".zip"){
+            println!("uzipping");
+            unzip_file(
             file_path.to_str().unwrap(), // foo.zip
-            file_path.with_extension("").to_str().unwrap()).unwrap(); // foo
+            file_path.with_extension("").to_str().unwrap())
+            .unwrap(); // foo
+            println!("file unzipped")
+        }
         Ok(())
     }
 }
