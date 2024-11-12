@@ -140,7 +140,7 @@ impl Server {
             }
             Request::Upload => {
                 let ftp = FileTransferProtocol::new(&self.path, self.buffer_size);
-                ftp.receive_directory(&mut Connection{ stream }).await?;
+                ftp.receive(&mut Connection{ stream }).await?;
             }
         }
         Ok(())
