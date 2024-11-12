@@ -175,7 +175,7 @@ impl FileTransferProtocol {
             let zip_path = path.with_extension("zip");
             let zip_clone = zip_path.clone();
             let handle = tokio::task::spawn_blocking( move || {
-                start_compressing(&path, &zip_path, zip::CompressionMethod::Deflated).expect("Could not compress directory");
+                start_compressing(&path, &zip_path, zip::CompressionMethod::Stored).expect("Could not compress directory");
             });
             handle.await.unwrap();
             self.send_file(&zip_clone, connection).await?;
