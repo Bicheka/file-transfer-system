@@ -179,6 +179,7 @@ impl FileTransferProtocol {
             });
             handle.await.unwrap();
             self.send_file(&zip_clone, connection).await?;
+            tokio::fs::remove_file(&zip_clone).await?;
             Ok(())
         })
     }
