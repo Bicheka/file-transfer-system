@@ -7,6 +7,16 @@ use std::fs::File;
 use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
 
+/// Compresses a directory into a zip archive.
+///
+/// # Arguments
+/// * `it` - An iterator over `DirEntry` objects representing files and directories to include in the zip archive.
+/// * `prefix` - The base directory path to preserve relative paths within the archive.
+/// * `writer` - An `Arc<Mutex<ZipWriter<T>>>` object that allows concurrent access to the `ZipWriter`.
+/// * `method` - The compression method to use (e.g., `zip::CompressionMethod::Stored` or `zip::CompressionMethod::Deflated`).
+///
+/// # Returns
+/// An `anyhow::Result<()>` indicating success or failure.
 pub fn zip_dir<T>(
     it: &mut dyn Iterator<Item = DirEntry>,
     prefix: &Path,
@@ -53,6 +63,15 @@ where
     Ok(())
 }
 
+/// Initializes compression for a source directory, creating a zip file at the specified destination.
+///
+/// # Arguments
+/// * `src_dir` - The path to the source directory to compress.
+/// * `dst_file` - The path where the resulting zip file should be saved.
+/// * `method` - The compression method to use for the zip file.
+///
+/// # Returns
+/// An `anyhow::Result<()>` indicating success or failure.
 pub fn start_compressing(src_dir: &Path, dst_file: &Path, method: zip::CompressionMethod) -> anyhow::Result<()> {
     if !src_dir.is_dir() {
         return Err(ZipError::FileNotFound.into());
@@ -71,8 +90,14 @@ pub fn start_compressing(src_dir: &Path, dst_file: &Path, method: zip::Compressi
     Ok(())
 }
 
-
-
+/// Extracts a zip file to a specified output directory.
+///
+/// # Arguments
+/// * `zip_path` - The path to the zip file to extract.
+/// * `output_dir` - The path to the directory where the contents should be extracted.
+///
+/// # Returns
+/// A `zip::result::ZipResult<()>` indicating success or failure.
 pub fn unzip_file(zip_path: &str, output_dir: &str) -> zip::result::ZipResult<()> {
     // Open the ZIP file
     let zip_file = File::open(zip_path)?;

@@ -1,5 +1,4 @@
 # File transfer system (FTS)
-![alt text](fts.png)
 A file transfer system library that provides functionality to send files of any size through TCP
 
 ## Provides functionality for:
