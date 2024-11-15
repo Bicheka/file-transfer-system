@@ -20,21 +20,12 @@ Check Fileflow which is a tauri app for sending files that implements this libra
 ./ src--------- // core library, where most of the code for the lives
   |-lib  
     -    client
+    -    compression
     -    file_transfer
     -    graceful_shutdown
     -    network
     -    p2p
     -    server
-```
-### Testing
-test all
-```
-cargo test
-```
-
-To run a test that is inside a feature
-```
-cargo test --all-features
 ```
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
