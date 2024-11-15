@@ -9,7 +9,7 @@ A file transfer system library that provides functionality to send files of any 
 
 ## Contribution
 Anyone that wants to contribute is more than welcomed. 
-Also, feel free to leave an issue if you want some feature or encounter an error or if you want to give feedback so I know what needs more work, it is really appreciated. [FTS repo](https://github.com/Bicheka/file-transfer-system)
+Also, feel free to leave an issue if you want some feature or encounter an error or if you want to give feedback so I know what needs more work, it is really appreciated. [FTS repo.](https://github.com/Bicheka/file-transfer-system)
 
 Check Fileflow which is a tauri app for sending files that implements this library. [Fileflow.](https://github.com/Bicheka/fileflow)
 
