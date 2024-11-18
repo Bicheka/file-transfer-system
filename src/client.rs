@@ -2,6 +2,7 @@ use std::{ net::{IpAddr, SocketAddr}, sync::Arc, time::Duration};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
+use tokio_rustls::TlsStream;
 use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 
 /// Represents a client for managing file transfers over a TCP connection.
@@ -31,7 +32,7 @@ pub struct Client {
     client_storage_path: String,
     server_address: IpAddr,
     timeout: Option<Duration>,
-    connection: Arc<Mutex<Option<TcpStream>>>,  
+    connection: Arc<Mutex<Option<TlsStream<TcpStream>>>>,  
 }
 
 impl Client {
@@ -51,20 +52,21 @@ impl Client {
 
     /// Connects to the server.
     pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
-        // Set the timeout duration
-        let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
-        let addr = SocketAddr::new(self.server_address, 8080);
+        // // Set the timeout duration
+        // let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
+        // let addr = SocketAddr::new(self.server_address, 8080);
 
-        // Apply timeout to the connection attempt
-        match time::timeout(timeout_duration, TcpStream::connect(addr)).await {
-            Ok(Ok(stream)) => {
-                let mut connection = self.connection.lock().await; // Ensure you're using tokio::sync::Mutex
-                *connection = Some(stream);
-                Ok(())
-            },
-            Ok(Err(e)) => Err(anyhow::anyhow!("Connection error: {}", e)),
-            Err(_) => Err(anyhow::anyhow!("Connection attempt timed out")),
-        }
+        // // Apply timeout to the connection attempt
+        // match time::timeout(timeout_duration, TcpStream::connect(addr)).await {
+        //     Ok(Ok(stream)) => {
+        //         let mut connection = self.connection.lock().await; // Ensure you're using tokio::sync::Mutex
+        //         *connection = Some(stream);
+        //         Ok(())
+        //     },
+        //     Ok(Err(e)) => Err(anyhow::anyhow!("Connection error: {}", e)),
+        //     Err(_) => Err(anyhow::anyhow!("Connection attempt timed out")),
+        // }
+        todo!()
     }
 
     /// Sends a request to the server. Ok if if ok to continue, Err if server declines for some reason

@@ -1,5 +1,6 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+use tokio_rustls::TlsStream;
 use std::path::{Path, PathBuf};
 use std::io::Error as IoError;
 use serde::{Serialize, Deserialize};
@@ -56,7 +57,7 @@ impl FileMetadata {
 
 /// Represents a connection over a TCP stream.
 pub struct Connection<'a> {
-    pub stream: &'a mut TcpStream,
+    pub stream: &'a mut TlsStream<TcpStream>,
 }
 
 impl<'a> Connection<'a> {

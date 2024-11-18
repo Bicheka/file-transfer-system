@@ -23,6 +23,8 @@ futures = "0.3.30"
 zip = "2.2.0"
 walkdir = "2.5.0"
 rayon = "1.10.0"
+tokio-rustls = "0.26.0"
+rcgen = "0.13.1"
 
 [dev-dependencies]
 tokio-test = "0.4.4"

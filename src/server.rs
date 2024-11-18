@@ -13,6 +13,12 @@ use crate::{
     network::Request,
 };
 
+// rustls
+use tokio_rustls::TlsStream;
+use tokio_rustls::rustls::pki_types::pem::PemObject;
+use tokio_rustls::rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
+use tokio_rustls::{rustls, TlsAcceptor};
+
 /// Represents a file server that listens for incoming connections and handles file transfer requests.
 #[derive(Clone)]
 pub struct Server {
@@ -53,8 +59,22 @@ impl Server {
 
     /// Starts the server, accepting and handling incoming connections.
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let cert = rcgen::generate_simple_self_signed([self.ip.to_string()]).unwrap();
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
         println!("Server running on {}", self.ip);
+        // accept connection
+        let acceptor = TlsAcceptor::from(Arc::new(
+            rustls::ServerConfig::builder()
+                .with_no_client_auth()
+                .with_single_cert(
+                    vec![cert.cert.der().clone()],
+                    PrivateKeyDer::Pkcs8(
+                        PrivatePkcs8KeyDer::from_pem_slice(cert.key_pair.serialize_pem().as_bytes())
+                            .unwrap(),
+                    ),
+                )
+                .unwrap(),
+        ));
 
         loop {
             tokio::select! {
@@ -62,11 +82,12 @@ impl Server {
                 result = listener.accept() => {
                     match result {
                         Ok((socket, addr)) => {
+                            let tls = acceptor.accept(socket).await.unwrap();
                             println!("New connection from: {}", addr);
                             let stop_signal_clone = Arc::clone(&self.stop_signal);
                             let self_clone = self.clone();
                             tokio::spawn(async {
-                                if let Err(e) = self_clone.handle_request(socket, stop_signal_clone).await {
+                                if let Err(e) = self_clone.handle_request(tokio_rustls::TlsStream::Server(tls), stop_signal_clone).await {
                                     eprintln!("Error handling connection: {:?}", e);
                                 }
                             });
@@ -92,7 +113,7 @@ impl Server {
     /// Handles an incoming connection by reading and processing client requests.
     async fn handle_request(
         self,
-        mut socket: TcpStream,
+        mut stream: TlsStream<TcpStream>,
         shutdown_signal: Arc<Notify>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut buffer = [0; 1024];
@@ -102,7 +123,7 @@ impl Server {
                     println!("Shutdown signal received. Closing connection.");
                     break;
                 }
-                bytes_read = socket.read(&mut buffer) => {
+                bytes_read = stream.read(&mut buffer) => {
                     match bytes_read {
                         Ok(0) => {
                             println!("Connection closed by client.");
@@ -116,7 +137,7 @@ impl Server {
                                     continue;
                                 }
                             };
-                            self.match_request(&request, &mut socket).await.expect("failed to match request");
+                            self.match_request(&request, &mut stream).await.expect("failed to match request");
                         }
                         Err(e) => {
                             eprintln!("Failed to read data from socket: {:?}", e);
@@ -131,7 +152,7 @@ impl Server {
     }
 
     /// Matches the incoming request to the appropriate action and executes it.
-    async fn match_request(&self, request: &Request, stream: &mut TcpStream) -> Result<(), TransferError> {
+    async fn match_request(&self, request: &Request, stream: &mut TlsStream<TcpStream>) -> Result<(), TransferError> {
         match request {
             Request::Get(path) => {
                 FileTransferProtocol::new(path, 64 * 1024)
