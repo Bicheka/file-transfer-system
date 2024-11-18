@@ -2,7 +2,7 @@ use std::{ net::{IpAddr, SocketAddr}, sync::Arc, time::Duration};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
-use tokio_rustls::TlsStream;
+use tokio_rustls::{rustls::{pki_types::ServerName, ClientConfig, RootCertStore}, TlsConnector, TlsStream};
 use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 
 /// Represents a client for managing file transfers over a TCP connection.
@@ -52,21 +52,38 @@ impl Client {
 
     /// Connects to the server.
     pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
-        // // Set the timeout duration
-        // let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30)); // Default timeout
-        // let addr = SocketAddr::new(self.server_address, 8080);
+        let cert = rcgen::generate_simple_self_signed([self.server_address.to_string()]).unwrap();
+        let mut trusted = RootCertStore::empty();
+        trusted.add(cert.cert.der().clone()).unwrap();
+        let connector: TlsConnector = TlsConnector::from(Arc::new(
+            ClientConfig::builder()
+                .with_root_certificates(trusted)
+                .with_no_client_auth(),
+        ));
+        
+        let addr = SocketAddr::new(self.server_address, 8080);
 
-        // // Apply timeout to the connection attempt
-        // match time::timeout(timeout_duration, TcpStream::connect(addr)).await {
-        //     Ok(Ok(stream)) => {
-        //         let mut connection = self.connection.lock().await; // Ensure you're using tokio::sync::Mutex
-        //         *connection = Some(stream);
-        //         Ok(())
-        //     },
-        //     Ok(Err(e)) => Err(anyhow::anyhow!("Connection error: {}", e)),
-        //     Err(_) => Err(anyhow::anyhow!("Connection attempt timed out")),
-        // }
-        todo!()
+        // set timeout duration
+        let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30));
+
+        let tcp = TcpStream::connect(addr);
+        
+        // apply timeout to tcp connection
+        let tcp = time::timeout(timeout_duration.clone(), tcp).await??;
+
+        let tls = connector
+            .connect(
+                ServerName::IpAddress(self.server_address.into()),
+                tcp,
+            );
+
+        // apply timeout for tls connection
+        let tls =  time::timeout(timeout_duration, tls).await??;
+
+        let mut connection =  self.connection.lock().await;
+        *connection = Some(tokio_rustls::TlsStream::Client(tls));
+
+        Ok(())
     }
 
     /// Sends a request to the server. Ok if if ok to continue, Err if server declines for some reason
