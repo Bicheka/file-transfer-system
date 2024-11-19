@@ -52,7 +52,15 @@ impl Client {
 
     /// Connects to the server.
     pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
-        let cert = rcgen::generate_simple_self_signed([self.server_address.to_string()]).unwrap();
+
+        let crypto_provider = tokio_rustls::rustls::crypto::aws_lc_rs::default_provider();
+
+        if let Err(err) = crypto_provider.install_default() {
+            eprintln!("Failed to install default CryptoProvider: {:?}", err)
+        }
+
+        let cert = rcgen::generate_simple_self_signed(vec![self.server_address.to_string()]).unwrap();
+        println!("Server Certificate:\n{}", cert.key_pair.serialize_pem());
         let mut trusted = RootCertStore::empty();
         trusted.add(cert.cert.der().clone()).unwrap();
         let connector: TlsConnector = TlsConnector::from(Arc::new(
@@ -63,22 +71,11 @@ impl Client {
         
         let addr = SocketAddr::new(self.server_address, 8080);
 
-        // set timeout duration
-        let timeout_duration = self.timeout.unwrap_or(Duration::from_secs(30));
-
-        let tcp = TcpStream::connect(addr);
-        
-        // apply timeout to tcp connection
-        let tcp = time::timeout(timeout_duration.clone(), tcp).await??;
+        let tcp = TcpStream::connect(addr).await?;
 
         let tls = connector
-            .connect(
-                ServerName::IpAddress(self.server_address.into()),
-                tcp,
-            );
-
-        // apply timeout for tls connection
-        let tls =  time::timeout(timeout_duration, tls).await??;
+            .connect(ServerName::IpAddress(self.server_address.into()), tcp)
+            .await.expect("Could not connect with tls");
 
         let mut connection =  self.connection.lock().await;
         *connection = Some(tokio_rustls::TlsStream::Client(tls));

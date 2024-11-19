@@ -59,7 +59,16 @@ impl Server {
 
     /// Starts the server, accepting and handling incoming connections.
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let cert = rcgen::generate_simple_self_signed([self.ip.to_string()]).unwrap();
+
+        let crypto_provider = rustls::crypto::aws_lc_rs::default_provider();
+
+        if let Err(err) = crypto_provider.install_default() {
+            eprintln!("Failed to install default CryptoProvider: {:?}", err)
+        }
+
+        let cert = rcgen::generate_simple_self_signed(vec![self.ip.to_string()])
+        .map_err(|e| format!("Certificate generation failed: {:?}", e))?;
+        println!("Server Certificate:\n{}", cert.key_pair.serialize_pem());
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
         println!("Server running on {}", self.ip);
         // accept connection
