@@ -68,7 +68,24 @@ impl Server {
 
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
 
-        
+        let cert = rcgen::generate_simple_self_signed(vec![self.ip.to_string()])
+        .map_err(|e| format!("Certificate generation failed: {:?}", e))?;
+        println!("Server Certificate:\n{}", cert.key_pair.serialize_pem());
+
+        println!("Server running on {}", self.ip);
+        // accept connection
+        let acceptor = TlsAcceptor::from(Arc::new(
+            rustls::ServerConfig::builder()
+                .with_no_client_auth()
+                .with_single_cert(
+                    vec![cert.cert.der().clone()],
+                    PrivateKeyDer::Pkcs8(
+                        PrivatePkcs8KeyDer::from_pem_slice(cert.key_pair.serialize_pem().as_bytes())
+                            .unwrap(),
+                    ),
+                )
+                .unwrap(),
+        ));
 
         loop {
             tokio::select! {
@@ -76,24 +93,7 @@ impl Server {
                 result = listener.accept() => {
                     match result {
                         Ok((socket, addr)) => {
-                            let cert = rcgen::generate_simple_self_signed(vec![addr.to_string()])
-                            .map_err(|e| format!("Certificate generation failed: {:?}", e))?;
-                            println!("Server Certificate:\n{}", cert.key_pair.serialize_pem());
-
-                            println!("Server running on {}", self.ip);
-                            // accept connection
-                            let acceptor = TlsAcceptor::from(Arc::new(
-                                rustls::ServerConfig::builder()
-                                    .with_no_client_auth()
-                                    .with_single_cert(
-                                        vec![cert.cert.der().clone()],
-                                        PrivateKeyDer::Pkcs8(
-                                            PrivatePkcs8KeyDer::from_pem_slice(cert.key_pair.serialize_pem().as_bytes())
-                                                .unwrap(),
-                                        ),
-                                    )
-                                    .unwrap(),
-                            ));
+                            
 
                             let tls = acceptor.accept(socket).await.unwrap();
                             println!("New connection from: {}", addr);
