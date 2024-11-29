@@ -17,8 +17,9 @@ use crate::{
 use tokio_rustls::TlsStream;
 use tokio_rustls::rustls::pki_types::pem::PemObject;
 use tokio_rustls::rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
-use tokio_rustls::{rustls, TlsAcceptor};
-use rustls::crypto::{aws_lc_rs, CryptoProvider};
+use tokio_rustls::TlsAcceptor;
+
+use rustls;
 /// Represents a file server that listens for incoming connections and handles file transfer requests.
 #[derive(Clone)]
 pub struct Server {
@@ -60,20 +61,11 @@ impl Server {
     /// Starts the server, accepting and handling incoming connections.
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
 
-        let parent = aws_lc_rs::default_provider();
-        let crypto_provider = CryptoProvider {
-            kx_groups: vec![
-                &rustls_post_quantum::X25519Kyber768Draft00,
-                aws_lc_rs::kx_group::X25519,
-            ],
-            ..parent
-        };
-
-        if let Err(err) = crypto_provider.install_default() {
+        if let Err(err) = rustls_post_quantum::provider().install_default() {
             eprintln!("Failed to install default CryptoProvider: {:?}", err)
         }
 
-        let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
+        
 
         let cert = rcgen::generate_simple_self_signed(vec![self.ip.to_string()])
         .map_err(|e| format!("Certificate generation failed: {:?}", e))?;
@@ -93,6 +85,8 @@ impl Server {
                 )
                 .unwrap(),
         ));
+
+        let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
 
         loop {
             tokio::select! {

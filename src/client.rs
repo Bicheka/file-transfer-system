@@ -53,9 +53,7 @@ impl Client {
     /// Connects to the server.
     pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
 
-        let crypto_provider = tokio_rustls::rustls::crypto::aws_lc_rs::default_provider();
-
-        if let Err(err) = crypto_provider.install_default() {
+        if let Err(err) = rustls_post_quantum::provider().install_default() {
             eprintln!("Failed to install default CryptoProvider: {:?}", err)
         }
 
