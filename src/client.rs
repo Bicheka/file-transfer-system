@@ -2,7 +2,7 @@ use std::{ net::{IpAddr, SocketAddr}, sync::Arc, time::Duration};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
-use tokio_rustls::{rustls::{pki_types::ServerName, ClientConfig, RootCertStore}, TlsConnector, TlsStream};
+use tokio_rustls::{rustls::pki_types::ServerName, TlsConnector, TlsStream};
 use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 
 /// Represents a client for managing file transfers over a TCP connection.
@@ -56,16 +56,19 @@ impl Client {
         if let Err(err) = rustls_post_quantum::provider().install_default() {
             eprintln!("Failed to install default CryptoProvider: {:?}", err)
         }
+        rustls_post_quantum::provider()
+        .install_default()
+        .unwrap();
 
-        let cert = rcgen::generate_simple_self_signed(vec![self.server_address.to_string()]).unwrap();
-        println!("Server Certificate:\n{}", cert.key_pair.serialize_pem());
-        let mut trusted = RootCertStore::empty();
-        trusted.add(cert.cert.der().clone()).unwrap();
-        let connector: TlsConnector = TlsConnector::from(Arc::new(
-            ClientConfig::builder()
-                .with_root_certificates(trusted)
-                .with_no_client_auth(),
-        ));
+        let root_store = rustls::RootCertStore {
+            roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+        };
+
+        let config = rustls::ClientConfig::builder()
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+        
+        let connector: TlsConnector = TlsConnector::from(Arc::new(config));
         
         let addr = SocketAddr::new(self.server_address, 8080);
 

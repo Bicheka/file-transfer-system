@@ -27,6 +27,7 @@ tokio-rustls = "0.26.0"
 rcgen = "0.13.1"
 rustls-post-quantum = "0.1.0"
 rustls = {version = "0.23.19", default-features = false}
+webpki-roots = "0.26.7"
 
 [dev-dependencies]
 tokio-test = "0.4.4"
