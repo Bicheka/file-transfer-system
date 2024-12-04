@@ -56,23 +56,22 @@ impl Client {
         if let Err(err) = rustls_post_quantum::provider().install_default() {
             eprintln!("Failed to install default CryptoProvider: {:?}", err)
         }
-        rustls_post_quantum::provider()
-        .install_default()
-        .unwrap();
 
-        let root_store = rustls::RootCertStore {
-            roots: webpki_roots::TLS_SERVER_ROOTS.into(),
-        };
+        let root_store = rustls::RootCertStore::from_iter(
+            webpki_roots::TLS_SERVER_ROOTS
+                .iter()
+                .cloned(),
+        );
 
         let config = rustls::ClientConfig::builder()
         .with_root_certificates(root_store)
         .with_no_client_auth();
-        
-        let connector: TlsConnector = TlsConnector::from(Arc::new(config));
-        
+         
         let addr = SocketAddr::new(self.server_address, 8080);
-
+       
         let tcp = TcpStream::connect(addr).await?;
+
+        let connector: TlsConnector = TlsConnector::from(Arc::new(config));
 
         let tls = connector
             .connect(ServerName::IpAddress(self.server_address.into()), tcp)
