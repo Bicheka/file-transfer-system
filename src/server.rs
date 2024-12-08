@@ -3,6 +3,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     sync::{Mutex, Notify},
 };
+use tokio_native_tls::{native_tls::{self, Identity}, TlsAcceptor, TlsStream};
 use std::{
     net::{IpAddr, SocketAddr},
     sync::Arc,
@@ -13,13 +14,6 @@ use crate::{
     network::Request,
 };
 
-// rustls
-use tokio_rustls::TlsStream;
-use tokio_rustls::rustls::pki_types::pem::PemObject;
-use tokio_rustls::rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
-use tokio_rustls::TlsAcceptor;
-
-use rustls;
 /// Represents a file server that listens for incoming connections and handles file transfer requests.
 #[derive(Clone)]
 pub struct Server {
@@ -61,32 +55,21 @@ impl Server {
     /// Starts the server, accepting and handling incoming connections.
     pub async fn start_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
 
-        if let Err(err) = rustls_post_quantum::provider().install_default() {
-            eprintln!("Failed to install default CryptoProvider: {:?}", err)
-        }
 
-        
-
-        let cert = rcgen::generate_simple_self_signed(vec![self.ip.to_string()])
+        let cert = rcgen::generate_simple_self_signed(vec![])
         .map_err(|e| format!("Certificate generation failed: {:?}", e))?;
         println!("Server Certificate:\n{}", cert.key_pair.serialize_pem());
 
         println!("Server running on {}", self.ip);
-        // accept connection
-        let acceptor = TlsAcceptor::from(Arc::new(
-            rustls::ServerConfig::builder()
-                .with_no_client_auth()
-                .with_single_cert(
-                    vec![cert.cert.der().clone()],
-                    PrivateKeyDer::Pkcs8(
-                        PrivatePkcs8KeyDer::from_pem_slice(cert.key_pair.serialize_pem().as_bytes())
-                            .unwrap(),
-                    ),
-                )
-                .unwrap(),
-        ));
 
         let listener = TcpListener::bind(SocketAddr::new(self.ip.to_owned(), self.port)).await?;
+
+        let acceptor = TlsAcceptor::from(
+            native_tls::TlsAcceptor::new(Identity::from_pkcs8(
+                cert.cert.pem().as_bytes(),
+                cert.key_pair.serialize_pem().as_bytes(),
+            ).unwrap()).unwrap(),
+        );
 
         loop {
             tokio::select! {
@@ -99,7 +82,7 @@ impl Server {
                             let stop_signal_clone = Arc::clone(&self.stop_signal);
                             let self_clone = self.clone();
                             tokio::spawn(async {
-                                if let Err(e) = self_clone.handle_request(tokio_rustls::TlsStream::Server(tls), stop_signal_clone).await {
+                                if let Err(e) = self_clone.handle_request(tls, stop_signal_clone).await {
                                     eprintln!("Error handling connection: {:?}", e);
                                 }
                             });

@@ -2,6 +2,7 @@ use std::{ net::{IpAddr, SocketAddr}, sync::Arc, time::Duration};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
+use tokio_native_tls::native_tls;
 use tokio_rustls::{rustls::pki_types::ServerName, TlsConnector, TlsStream};
 use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 
@@ -53,34 +54,26 @@ impl Client {
     /// Connects to the server.
     pub async fn connect(&mut self) -> Result<(), anyhow::Error> {
 
-        if let Err(err) = rustls_post_quantum::provider().install_default() {
-            eprintln!("Failed to install default CryptoProvider: {:?}", err)
-        }
 
-        let root_store = rustls::RootCertStore::from_iter(
-            webpki_roots::TLS_SERVER_ROOTS
-                .iter()
-                .cloned(),
-        );
+        // TODO connect to tcp and send back server certificate inmediately 
 
-        let config = rustls::ClientConfig::builder()
-        .with_root_certificates(root_store)
-        .with_no_client_auth();
-         
-        let addr = SocketAddr::new(self.server_address, 8080);
+        //let trusted = native_tls::Certificate::from_pem(cert.cert.pem().as_bytes()).unwrap();
+        // let addr = SocketAddr::new(self.server_address, 8080);
        
-        let tcp = TcpStream::connect(addr).await?;
+        // let tcp = TcpStream::connect(addr).await?;
 
-        let connector: TlsConnector = TlsConnector::from(Arc::new(config));
+        // let connector: TlsConnector = TlsConnector::from(Arc::new(config));
 
-        let tls = connector
-            .connect(ServerName::IpAddress(self.server_address.into()), tcp)
-            .await.expect("Could not connect with tls");
+        // let tls = connector
+        //     .connect(ServerName::IpAddress(self.server_address.into()), tcp)
+        //     .await.expect("Could not connect with tls");
 
-        let mut connection =  self.connection.lock().await;
-        *connection = Some(tokio_rustls::TlsStream::Client(tls));
+        // let mut connection =  self.connection.lock().await;
+        
+        // //*connection = Some(tokio_rustls::TlsStream::Client(tls));
 
-        Ok(())
+        // Ok(())
+        todo!()
     }
 
     /// Sends a request to the server. Ok if if ok to continue, Err if server declines for some reason

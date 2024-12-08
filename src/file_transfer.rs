@@ -1,6 +1,6 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio_rustls::TlsStream;
+use tokio_native_tls::TlsStream;
 use std::path::{Path, PathBuf};
 use std::io::Error as IoError;
 use serde::{Serialize, Deserialize};
