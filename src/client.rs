@@ -3,7 +3,7 @@ use std::{ net::{IpAddr, SocketAddr}, sync::Arc, time::Duration};
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex, time};
 use bincode;
 use tokio_native_tls::native_tls;
-use tokio_rustls::{rustls::pki_types::ServerName, TlsConnector, TlsStream};
+use tokio_native_tls::TlsStream;
 use crate::{file_transfer::{Connection, FileTransferProtocol, TransferError}, network::Request};
 
 /// Represents a client for managing file transfers over a TCP connection.
