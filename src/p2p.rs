@@ -1,5 +1,4 @@
 use upnp::upnp;
-
 /// Attempts to traverse NAT using available methods.
 ///
 /// Currently, only UPnP is implemented. If UPnP is successful, the function will return.
